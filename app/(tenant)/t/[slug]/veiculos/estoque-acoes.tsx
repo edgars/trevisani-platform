@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { MoreHorizontal, Trash2, CheckCircle, Clock, Archive } from "lucide-react";
+import { useTransition } from "react";
+import Link from "next/link";
+import { MoreHorizontal, Trash2, CheckCircle, Clock, Archive, Images } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -48,8 +49,18 @@ export function EstoqueAcoes({ slug, veiculoId, statusAtual }: Props) {
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
+      <DropdownMenuContent align="end" className="w-48">
+        {/* Fotos */}
+        <DropdownMenuItem asChild className="gap-2">
+          <Link href={`/t/${slug}/veiculos/${veiculoId}/fotos`}>
+            <Images className="h-4 w-4 text-muted-foreground" />
+            Gerenciar fotos
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
         <DropdownMenuLabel>Alterar status</DropdownMenuLabel>
+
         {statusAtual !== "DISPONIVEL" && (
           <DropdownMenuItem onClick={() => handleStatus("DISPONIVEL")} className="gap-2">
             <CheckCircle className="h-4 w-4 text-emerald-600" />
@@ -74,15 +85,18 @@ export function EstoqueAcoes({ slug, veiculoId, statusAtual }: Props) {
             Baixado
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
+
         {statusAtual !== "VENDIDO" && (
-          <DropdownMenuItem
-            onClick={handleExcluir}
-            className="gap-2 text-destructive focus:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-            Excluir
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleExcluir}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

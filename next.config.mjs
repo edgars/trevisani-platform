@@ -3,12 +3,14 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     serverActions: {
-      bodySizeLimit: "5mb",
+      bodySizeLimit: "10mb",
     },
   },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
+      // Supabase Storage (fotos de veículos)
+      { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
 };

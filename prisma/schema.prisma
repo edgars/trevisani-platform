@@ -111,6 +111,12 @@ enum TipoMovimento {
   SAIDA
 }
 
+enum StatusFotoVeiculo {
+  BATIDO        // foto tirada no recebimento com danos
+  EM_REPARO     // foto durante a preparação/reparo
+  PRONTO_VENDA  // foto final para vitrine
+}
+
 enum FormaPagamento {
   PIX
   BOLETO
@@ -490,11 +496,15 @@ model Veiculo {
 }
 
 model FotoVeiculo {
-  id        String   @id @default(cuid())
-  veiculoId String
-  url       String
-  ordem     Int      @default(0)
-  createdAt DateTime @default(now())
+  id          String            @id @default(cuid())
+  veiculoId   String
+  url         String            // URL pública no Supabase Storage
+  storagePath String            // path interno para exclusão no bucket
+  legenda     String?
+  status      StatusFotoVeiculo @default(PRONTO_VENDA)
+  destaque    Boolean           @default(false)
+  ordem       Int               @default(0)
+  createdAt   DateTime          @default(now())
 
   veiculo Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
 

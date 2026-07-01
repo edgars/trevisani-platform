@@ -17,6 +17,14 @@ export function formatDate(date: Date | string, opts?: Intl.DateTimeFormatOption
   return new Intl.DateTimeFormat("pt-BR", opts ?? { dateStyle: "short" }).format(d);
 }
 
+/** Converte "R$ 25.000,50" → centavos (2500050) */
+export function parseCentavos(raw: string | number): number {
+  if (typeof raw === "number") return Math.round(raw * 100);
+  const clean = raw.replace(/[R$\s.]/g, "").replace(",", ".");
+  const value = parseFloat(clean);
+  return isNaN(value) ? 0 : Math.round(value * 100);
+}
+
 export function initials(name: string): string {
   return name
     .trim()

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
+import { parseCentavos } from "@/lib/utils";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -32,16 +33,6 @@ const veiculoSchema = z.object({
   precoVendaCentavos: z.coerce.number().int().min(0).default(0),
   observacoes: z.string().optional(),
 });
-
-// ─── Helper monetário ─────────────────────────────────────────────────────────
-
-/** Converte "R$ 25.000,50" → centavos (2500050) */
-export function parseCentavos(raw: string | number): number {
-  if (typeof raw === "number") return Math.round(raw * 100);
-  const clean = raw.replace(/[R$\s.]/g, "").replace(",", ".");
-  const value = parseFloat(clean);
-  return isNaN(value) ? 0 : Math.round(value * 100);
-}
 
 // ─── Criar ────────────────────────────────────────────────────────────────────
 
