@@ -1,0 +1,883 @@
+// AutoGestão - Schema Prisma
+// Estratégia multi-tenant: schema único compartilhado + coluna `tenantId`
+// em toda entidade de negócio. RLS é aplicada via migration SQL adicional.
+// -----------------------------------------------------------------------------
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =========================================================================
+// ENUMS
+// =========================================================================
+
+enum EscopoUsuario {
+  STAFF       // Operador ou admin do tenant
+  FORNECEDOR  // Portal do fornecedor
+  CLIENTE     // Portal do cliente final
+  PLATAFORMA  // Super Admin (sem tenantId)
+}
+
+enum StatusTenant {
+  ATIVO
+  SUSPENSO
+  TRIAL
+  CANCELADO
+}
+
+enum StatusAssinaturaPlataforma {
+  ATIVA
+  INADIMPLENTE
+  CANCELADA
+  TRIAL
+}
+
+enum StatusVeiculo {
+  DISPONIVEL
+  RESERVADO
+  VENDIDO
+  EM_PREPARACAO
+  BAIXADO
+}
+
+enum CombustivelVeiculo {
+  GASOLINA
+  ETANOL
+  FLEX
+  DIESEL
+  GNV
+  HIBRIDO
+  ELETRICO
+}
+
+enum CambioVeiculo {
+  MANUAL
+  AUTOMATICO
+  AUTOMATIZADO
+  CVT
+}
+
+enum OrigemVeiculo {
+  COMPRA
+  CONSIGNACAO
+  TROCA
+}
+
+enum StatusOferta {
+  ENVIADA
+  EM_ANALISE
+  ACEITA
+  RECUSADA
+  CONVERTIDA
+  CANCELADA
+}
+
+enum StatusCompra {
+  RASCUNHO
+  AGUARDANDO_ASSINATURA
+  CONCLUIDA
+  CANCELADA
+}
+
+enum StatusVenda {
+  RASCUNHO
+  PROPOSTA_ENVIADA
+  RESERVADA
+  AGUARDANDO_ASSINATURA
+  CONCLUIDA
+  CANCELADA
+}
+
+enum TipoPessoa {
+  PF
+  PJ
+}
+
+enum StatusDespesa {
+  ABERTA
+  PAGA
+  CANCELADA
+}
+
+enum TipoMovimento {
+  ENTRADA
+  SAIDA
+}
+
+enum FormaPagamento {
+  PIX
+  BOLETO
+  CARTAO
+  TRANSFERENCIA
+  FINANCIAMENTO
+  DINHEIRO
+  OUTRO
+}
+
+enum StatusParcela {
+  ABERTA
+  PAGA
+  ATRASADA
+  CANCELADA
+}
+
+enum StatusAssinaturaDoc {
+  RASCUNHO
+  ENVIADO
+  PARCIALMENTE_ASSINADO
+  CONCLUIDO
+  CANCELADO
+  EXPIRADO
+}
+
+enum ProvedorAssinatura {
+  DOCUSIGN
+  ZAPSIGN
+  CLICKSIGN
+  D4SIGN
+}
+
+enum ProvedorEmail {
+  RESEND
+  SMTP
+}
+
+enum ProvedorWhatsapp {
+  EVOLUTION
+  CLOUD_API
+}
+
+enum TipoIntegracao {
+  ASSINATURA
+  EMAIL
+  WHATSAPP
+  ARMAZENAMENTO
+  CONSULTA_VEICULAR
+}
+
+// =========================================================================
+// PLATAFORMA (sem tenantId)
+// =========================================================================
+
+model Plataforma {
+  id         String   @id @default(cuid())
+  nome       String
+  dominio    String?
+  configJson Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("plataforma")
+}
+
+model Plano {
+  id                     String   @id @default(cuid())
+  nome                   String   @unique
+  slug                   String   @unique
+  descricao              String?
+  precoMensalCentavos    Int      @default(0)
+  precoAnualCentavos     Int      @default(0)
+  limiteUsuarios         Int      @default(5)
+  limiteVeiculos         Int      @default(50)
+  limiteIntegracoesJson  Json?    // { assinatura: true, whatsapp: false, ... }
+  featuresJson           Json?    // feature flags
+  ativo                  Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  assinaturas AssinaturaPlataforma[]
+  tenants     Tenant[]
+
+  @@map("plano")
+}
+
+model AssinaturaPlataforma {
+  id             String                     @id @default(cuid())
+  tenantId       String                     @unique
+  planoId        String
+  status         StatusAssinaturaPlataforma @default(TRIAL)
+  cicloDias      Int                        @default(30)
+  inicioAtual    DateTime                   @default(now())
+  fimAtual       DateTime?
+  canceladoEm    DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plano  Plano  @relation(fields: [planoId], references: [id])
+
+  @@index([status])
+  @@map("assinatura_plataforma")
+}
+
+// =========================================================================
+// TENANT (raiz da isolação)
+// =========================================================================
+
+model Tenant {
+  id           String       @id @default(cuid())
+  nome         String
+  razaoSocial  String?
+  cnpj         String?      @unique
+  slug         String       @unique
+  dominio      String?      @unique
+  logoUrl      String?
+  status       StatusTenant @default(TRIAL)
+  configJson   Json?
+  planoId      String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  plano                Plano?                @relation(fields: [planoId], references: [id])
+  assinaturaPlataforma AssinaturaPlataforma?
+
+  usuarios             Usuario[]
+  papeis               Papel[]
+  fornecedores         Fornecedor[]
+  clientesFinais       ClienteFinal[]
+  veiculos             Veiculo[]
+  ofertas              OfertaVeiculo[]
+  pacotesOferta        PacoteOferta[]
+  compras              Compra[]
+  vendas               Venda[]
+  despesas             Despesa[]
+  pagamentos           Pagamento[]
+  categoriasFinanceira CategoriaFinanceira[]
+  modelosDocumento    ModeloDocumento[]
+  documentos           Documento[]
+  fluxosAssinatura     FluxoAssinatura[]
+  integracoesConfig    IntegracaoConfig[]
+  emailLogs            EmailLog[]
+  mensagensWhatsapp    MensagemWhatsapp[]
+  notificacoes         Notificacao[]
+  auditLogs            AuditLog[]
+
+  @@index([status])
+  @@map("tenant")
+}
+
+// =========================================================================
+// RBAC + USUÁRIOS
+// =========================================================================
+
+model Usuario {
+  id            String        @id @default(cuid())
+  tenantId      String?       // null = Super Admin
+  escopo        EscopoUsuario
+  nome          String
+  email         String
+  senhaHash     String?       // null se o login for por provedor externo
+  emailVerified DateTime?
+  imageUrl      String?
+  fornecedorId  String?       @unique
+  clienteId     String?       @unique
+  ativo         Boolean       @default(true)
+  ultimoLoginEm DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant       Tenant?         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fornecedor   Fornecedor?     @relation(fields: [fornecedorId], references: [id])
+  clienteFinal ClienteFinal?   @relation(fields: [clienteId], references: [id])
+  papeis       UsuarioPapel[]
+  accounts     Account[]
+  sessions     Session[]
+  auditLogs    AuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([email])
+  @@map("usuario")
+}
+
+model Papel {
+  id          String   @id @default(cuid())
+  tenantId    String
+  nome        String
+  slug        String
+  descricao   String?
+  sistemico   Boolean  @default(false) // não pode ser removido pelo Admin do tenant
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissoes  PapelPermissao[]
+  usuarios    UsuarioPapel[]
+
+  @@unique([tenantId, slug])
+  @@map("papel")
+}
+
+model Permissao {
+  id        String   @id @default(cuid())
+  slug      String   @unique // ex.: "veiculo.criar", "venda.aprovar"
+  modulo    String
+  acao      String
+  descricao String?
+  createdAt DateTime @default(now())
+
+  papeis PapelPermissao[]
+
+  @@map("permissao")
+}
+
+model PapelPermissao {
+  papelId     String
+  permissaoId String
+
+  papel     Papel     @relation(fields: [papelId], references: [id], onDelete: Cascade)
+  permissao Permissao @relation(fields: [permissaoId], references: [id], onDelete: Cascade)
+
+  @@id([papelId, permissaoId])
+  @@map("papel_permissao")
+}
+
+model UsuarioPapel {
+  usuarioId String
+  papelId   String
+  createdAt DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  papel   Papel   @relation(fields: [papelId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, papelId])
+  @@map("usuario_papel")
+}
+
+// =========================================================================
+// Auth.js (NextAuth) - contas e sessões
+// =========================================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("account")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_token")
+}
+
+// =========================================================================
+// FORNECEDORES E CLIENTES FINAIS
+// =========================================================================
+
+model Fornecedor {
+  id           String     @id @default(cuid())
+  tenantId     String
+  tipoPessoa   TipoPessoa @default(PJ)
+  nome         String
+  documento    String     // CPF ou CNPJ
+  email        String?
+  telefone     String?
+  observacoes  String?
+  ativo        Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuario Usuario?
+  ofertas OfertaVeiculo[]
+  pacotes PacoteOferta[]
+  compras Compra[]
+
+  @@unique([tenantId, documento])
+  @@index([tenantId, nome])
+  @@map("fornecedor")
+}
+
+model ClienteFinal {
+  id           String     @id @default(cuid())
+  tenantId     String
+  tipoPessoa   TipoPessoa @default(PF)
+  nome         String
+  documento    String     // CPF ou CNPJ
+  email        String?
+  telefone     String?
+  endereco     String?
+  observacoes  String?
+  consenteLgpd Boolean    @default(false)
+  ativo        Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuario Usuario?
+  vendas  Venda[]
+
+  @@unique([tenantId, documento])
+  @@index([tenantId, nome])
+  @@map("cliente_final")
+}
+
+// =========================================================================
+// VEÍCULOS E OFERTAS
+// =========================================================================
+
+model Veiculo {
+  id                  String              @id @default(cuid())
+  tenantId            String
+  placa               String?
+  renavam             String?
+  chassi              String?
+  marca               String
+  modelo              String
+  versao              String?
+  anoFabricacao       Int
+  anoModelo           Int
+  cor                 String?
+  combustivel         CombustivelVeiculo?
+  cambio              CambioVeiculo?
+  kmAtual             Int?
+  categoria           String?
+  situacaoDocumental  String?
+  origem              OrigemVeiculo       @default(COMPRA)
+  precoCustoCentavos  Int                 @default(0)
+  precoVendaCentavos  Int                 @default(0)
+  status              StatusVeiculo       @default(EM_PREPARACAO)
+  fornecedorId        String?
+  observacoes         String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fotos      FotoVeiculo[]
+  ofertas    OfertaVeiculo[]
+  itensCompra ItemCompra[]
+  itensVenda  ItemVenda[]
+
+  @@unique([tenantId, chassi])
+  @@unique([tenantId, placa])
+  @@index([tenantId, status])
+  @@index([tenantId, marca, modelo])
+  @@map("veiculo")
+}
+
+model FotoVeiculo {
+  id        String   @id @default(cuid())
+  veiculoId String
+  url       String
+  ordem     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  veiculo Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  @@index([veiculoId, ordem])
+  @@map("foto_veiculo")
+}
+
+model OfertaVeiculo {
+  id                    String       @id @default(cuid())
+  tenantId              String
+  fornecedorId          String
+  veiculoId             String?      // preenchido após conversão em estoque
+  pacoteId              String?
+  marca                 String
+  modelo                String
+  anoModelo             Int
+  kmAtual               Int?
+  precoPretendidoCentavos Int
+  observacoes           String?
+  status                StatusOferta @default(ENVIADA)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor    @relation(fields: [fornecedorId], references: [id])
+  veiculo    Veiculo?      @relation(fields: [veiculoId], references: [id])
+  pacote     PacoteOferta? @relation(fields: [pacoteId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("oferta_veiculo")
+}
+
+model PacoteOferta {
+  id           String       @id @default(cuid())
+  tenantId     String
+  fornecedorId String
+  nome         String
+  observacoes  String?
+  status       StatusOferta @default(ENVIADA)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor      @relation(fields: [fornecedorId], references: [id])
+  itens      OfertaVeiculo[]
+
+  @@index([tenantId, status])
+  @@map("pacote_oferta")
+}
+
+// =========================================================================
+// COMPRAS E VENDAS
+// =========================================================================
+
+model Compra {
+  id                    String       @id @default(cuid())
+  tenantId              String
+  fornecedorId          String
+  numero                Int          // sequencial por tenant
+  dataOperacao          DateTime     @default(now())
+  valorTotalCentavos    Int          @default(0)
+  observacoes           String?
+  status                StatusCompra @default(RASCUNHO)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor   @relation(fields: [fornecedorId], references: [id])
+  itens      ItemCompra[]
+  pagamentos Pagamento[]
+  documentos Documento[]
+
+  @@unique([tenantId, numero])
+  @@index([tenantId, status])
+  @@map("compra")
+}
+
+model ItemCompra {
+  id                 String @id @default(cuid())
+  compraId           String
+  veiculoId          String
+  valorCentavos      Int
+  observacoes        String?
+
+  compra  Compra  @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  veiculo Veiculo @relation(fields: [veiculoId], references: [id])
+
+  @@map("item_compra")
+}
+
+model Venda {
+  id                    String      @id @default(cuid())
+  tenantId              String
+  clienteId             String
+  numero                Int          // sequencial por tenant
+  dataOperacao          DateTime     @default(now())
+  valorTotalCentavos    Int          @default(0)
+  descontoCentavos      Int          @default(0)
+  entradaCentavos       Int          @default(0)
+  observacoes           String?
+  status                StatusVenda @default(RASCUNHO)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cliente    ClienteFinal @relation(fields: [clienteId], references: [id])
+  itens      ItemVenda[]
+  pagamentos Pagamento[]
+  documentos Documento[]
+
+  @@unique([tenantId, numero])
+  @@index([tenantId, status])
+  @@map("venda")
+}
+
+model ItemVenda {
+  id            String @id @default(cuid())
+  vendaId       String
+  veiculoId     String
+  valorCentavos Int
+  observacoes   String?
+
+  venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  veiculo Veiculo @relation(fields: [veiculoId], references: [id])
+
+  @@map("item_venda")
+}
+
+// =========================================================================
+// FINANCEIRO
+// =========================================================================
+
+model CategoriaFinanceira {
+  id        String        @id @default(cuid())
+  tenantId  String
+  nome      String
+  tipo      TipoMovimento
+  ativo     Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  despesas   Despesa[]
+  pagamentos Pagamento[]
+
+  @@unique([tenantId, nome])
+  @@map("categoria_financeira")
+}
+
+model Despesa {
+  id            String        @id @default(cuid())
+  tenantId      String
+  categoriaId   String?
+  descricao     String
+  valorCentavos Int
+  vencimento    DateTime?
+  status        StatusDespesa @default(ABERTA)
+  anexoUrl      String?
+  observacoes   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  tenant     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categoria  CategoriaFinanceira? @relation(fields: [categoriaId], references: [id])
+  pagamentos Pagamento[]
+
+  @@index([tenantId, status])
+  @@map("despesa")
+}
+
+model Pagamento {
+  id             String         @id @default(cuid())
+  tenantId       String
+  tipo           TipoMovimento
+  descricao      String
+  valorCentavos  Int
+  formaPagamento FormaPagamento @default(PIX)
+  categoriaId    String?
+  compraId       String?
+  vendaId        String?
+  despesaId      String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categoria CategoriaFinanceira? @relation(fields: [categoriaId], references: [id])
+  compra    Compra?              @relation(fields: [compraId], references: [id])
+  venda     Venda?               @relation(fields: [vendaId], references: [id])
+  despesa   Despesa?             @relation(fields: [despesaId], references: [id])
+  parcelas  Parcela[]
+
+  @@index([tenantId, tipo])
+  @@map("pagamento")
+}
+
+model Parcela {
+  id            String        @id @default(cuid())
+  pagamentoId   String
+  numero        Int
+  vencimento    DateTime
+  valorCentavos Int
+  pagoEm        DateTime?
+  status        StatusParcela @default(ABERTA)
+
+  pagamento Pagamento @relation(fields: [pagamentoId], references: [id], onDelete: Cascade)
+
+  @@unique([pagamentoId, numero])
+  @@map("parcela")
+}
+
+// =========================================================================
+// DOCUMENTOS E ASSINATURAS
+// =========================================================================
+
+model ModeloDocumento {
+  id            String   @id @default(cuid())
+  tenantId      String
+  nome          String
+  descricao     String?
+  conteudoHtml  String   @db.Text
+  variaveisJson Json?
+  versao        Int      @default(1)
+  ativo         Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documentos Documento[]
+
+  @@unique([tenantId, nome, versao])
+  @@map("modelo_documento")
+}
+
+model Documento {
+  id           String   @id @default(cuid())
+  tenantId     String
+  modeloId     String?
+  nome         String
+  url          String
+  mimeType     String?
+  compraId     String?
+  vendaId      String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  modelo           ModeloDocumento?  @relation(fields: [modeloId], references: [id])
+  compra           Compra?           @relation(fields: [compraId], references: [id])
+  venda            Venda?            @relation(fields: [vendaId], references: [id])
+  fluxoAssinatura  FluxoAssinatura?
+
+  @@index([tenantId])
+  @@map("documento")
+}
+
+model FluxoAssinatura {
+  id                String              @id @default(cuid())
+  tenantId          String
+  documentoId       String              @unique
+  provedor          ProvedorAssinatura
+  envelopeExterno   String?             // ID do envelope no provedor
+  status            StatusAssinaturaDoc @default(RASCUNHO)
+  webhookIdempotencia String?           @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documento   Documento              @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  signatarios SignatarioAssinatura[]
+
+  @@index([tenantId, status])
+  @@map("fluxo_assinatura")
+}
+
+model SignatarioAssinatura {
+  id           String              @id @default(cuid())
+  fluxoId      String
+  nome         String
+  email        String
+  cpf          String?
+  papel        String?             // "COMPRADOR", "VENDEDOR", "TESTEMUNHA"
+  ordem        Int                 @default(0)
+  status       StatusAssinaturaDoc @default(RASCUNHO)
+  assinadoEm   DateTime?
+
+  fluxo FluxoAssinatura @relation(fields: [fluxoId], references: [id], onDelete: Cascade)
+
+  @@map("signatario_assinatura")
+}
+
+// =========================================================================
+// INTEGRAÇÕES E COMUNICAÇÃO
+// =========================================================================
+
+model IntegracaoConfig {
+  id             String         @id @default(cuid())
+  tenantId       String
+  tipo           TipoIntegracao
+  provedor       String
+  // credencialCriptografada guarda um blob AES-256 GCM (nunca em texto puro)
+  credencialCiph String         @db.Text
+  configJson     Json?
+  ativo          Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, tipo, provedor])
+  @@map("integracao_config")
+}
+
+model EmailLog {
+  id           String    @id @default(cuid())
+  tenantId     String
+  para         String
+  assunto      String
+  status       String
+  provedor     String
+  erro         String?
+  idempotencia String?   @unique
+  createdAt    DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("email_log")
+}
+
+model MensagemWhatsapp {
+  id           String    @id @default(cuid())
+  tenantId     String
+  para         String
+  mensagem     String    @db.Text
+  status       String
+  provedor     String
+  erro         String?
+  idempotencia String?   @unique
+  createdAt    DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("mensagem_whatsapp")
+}
+
+model Notificacao {
+  id        String   @id @default(cuid())
+  tenantId  String
+  usuarioId String?
+  titulo    String
+  corpo     String
+  lidaEm    DateTime?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, usuarioId])
+  @@map("notificacao")
+}
+
+// =========================================================================
+// AUDITORIA
+// =========================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String?
+  usuarioId  String?
+  entidade   String
+  entidadeId String?
+  acao       String
+  antes      Json?
+  depois     Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  tenant  Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, entidade, createdAt])
+  @@map("audit_log")
+}

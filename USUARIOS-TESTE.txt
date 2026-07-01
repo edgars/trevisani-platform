@@ -1,0 +1,74 @@
+==============================================================================
+AutoGestão — Usuários de teste (criados pelo `npm run db:seed`)
+==============================================================================
+URL da app:  http://localhost:3000
+
+------------------------------------------------------------------------------
+ 1) SUPER ADMIN (painel da Plataforma)
+------------------------------------------------------------------------------
+  URL         : http://localhost:3000/admin
+  E-mail      : admin@autogestao.com
+  Senha       : admin@123
+  Slug loja   : (deixe em branco no formulário de login)
+  Escopo      : PLATAFORMA
+  Pode        : gerenciar tenants, planos, métricas globais, impersonar tenants
+
+------------------------------------------------------------------------------
+ 2) ADMIN DO TENANT "demo" (painel operacional da loja)
+------------------------------------------------------------------------------
+  URL         : http://localhost:3000/t/demo
+  E-mail      : admin@demo.com
+  Senha       : demo@123
+  Slug loja   : demo
+  Escopo      : STAFF
+  Papel       : admin (Administrador do tenant)
+  Permissões  : todas as 20 permissões (veiculo.*, compra.*, venda.*,
+                financeiro.*, oferta.*, documento.*, usuario.gerenciar,
+                papel.gerenciar, integracao.gerenciar, tenant.gerenciar)
+
+==============================================================================
+ Papéis pré-cadastrados no tenant "demo" (prontos pra serem atribuídos)
+==============================================================================
+  admin       — acesso total
+  vendedor    — veiculo.listar, venda.criar/listar, documento.gerar,
+                financeiro.visualizar
+  comprador   — veiculo.criar/editar/listar, oferta.listar,
+                compra.criar/aprovar/listar
+  financeiro  — financeiro.gerenciar, financeiro.visualizar
+
+==============================================================================
+ Como logar
+==============================================================================
+  1. Acesse http://localhost:3000/login
+  2. Preencha "Slug da loja" (só para acesso de tenant; deixe vazio p/ Super
+     Admin) + e-mail + senha
+  3. Após o login o sistema redireciona automaticamente:
+       - Super Admin (sem slug) → /admin
+       - Staff do tenant        → /t/{slug}
+       - Fornecedor             → /portal-fornecedor/{slug}
+       - Cliente Final          → /portal-cliente/{slug}
+
+==============================================================================
+ Perfis de fornecedor e cliente final
+==============================================================================
+  Ainda não existem — serão criados por convite (via e-mail) na Fase 1.
+  A partir do painel do tenant você poderá:
+    - "Fornecedores" → convidar um fornecedor a submeter ofertas
+    - "Clientes"     → cadastrar um cliente final (com consentimento LGPD)
+
+==============================================================================
+ Como resetar / recriar os usuários
+==============================================================================
+  npm run db:seed            (idempotente — pode rodar quantas vezes quiser)
+
+  Para começar do zero:
+    npx prisma migrate reset       (apaga tudo e recria)
+    npm run db:seed
+
+==============================================================================
+ ATENÇÃO
+==============================================================================
+  Estas senhas são apenas para desenvolvimento. Nunca use "admin@123" ou
+  "demo@123" em produção. Ao ir para produção, altere o seed ou crie os
+  primeiros usuários manualmente com senhas fortes.
+==============================================================================
