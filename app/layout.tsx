@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque } from "next/font/google";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -28,8 +29,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning className={bricolage.variable}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        {children}
-        <Toaster richColors position="top-right" />
+        <ThemeProvider>
+          {children}
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

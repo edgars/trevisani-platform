@@ -9,7 +9,7 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
-      // Supabase Storage (fotos de veículos)
+      // Supabase Storage (fotos de veículos e assets de website)
       { protocol: "https", hostname: "*.supabase.co" },
     ],
   },

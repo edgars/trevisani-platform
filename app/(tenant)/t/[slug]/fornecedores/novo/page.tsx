@@ -14,7 +14,7 @@ export default async function NovoFornecedorPage({
   const { slug } = await params;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="icon" className="h-8 w-8">
           <Link href={`/t/${slug}/fornecedores`}>

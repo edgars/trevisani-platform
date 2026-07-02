@@ -5,9 +5,11 @@ import Link from "next/link";
 import {
   MoreHorizontal,
   Trash2,
+  BadgeCheck,
   CheckCircle,
   Clock,
   Archive,
+  Handshake,
   Images,
   FolderOpen,
   Pencil,
@@ -34,7 +36,9 @@ interface Props {
 export function EstoqueAcoes({ slug, veiculoId, statusAtual }: Props) {
   const [isPending, startTransition] = useTransition();
 
-  function handleStatus(status: "DISPONIVEL" | "EM_PREPARACAO" | "RESERVADO" | "BAIXADO") {
+  function handleStatus(
+    status: "NEGOCIANDO" | "DISPONIVEL" | "EM_PREPARACAO" | "RESERVADO" | "VENDIDO" | "BAIXADO",
+  ) {
     startTransition(async () => {
       const result = await atualizarStatusVeiculoAction(slug, veiculoId, status);
       if (result.error) toast.error(result.error);
@@ -86,6 +90,12 @@ export function EstoqueAcoes({ slug, veiculoId, statusAtual }: Props) {
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Alterar status</DropdownMenuLabel>
 
+        {statusAtual !== "NEGOCIANDO" && (
+          <DropdownMenuItem onClick={() => handleStatus("NEGOCIANDO")} className="gap-2">
+            <Handshake className="h-4 w-4 text-violet-600" />
+            Negociando
+          </DropdownMenuItem>
+        )}
         {statusAtual !== "DISPONIVEL" && (
           <DropdownMenuItem onClick={() => handleStatus("DISPONIVEL")} className="gap-2">
             <CheckCircle className="h-4 w-4 text-emerald-600" />
@@ -102,6 +112,12 @@ export function EstoqueAcoes({ slug, veiculoId, statusAtual }: Props) {
           <DropdownMenuItem onClick={() => handleStatus("RESERVADO")} className="gap-2">
             <Clock className="h-4 w-4 text-blue-600" />
             Reservado
+          </DropdownMenuItem>
+        )}
+        {statusAtual !== "VENDIDO" && (
+          <DropdownMenuItem onClick={() => handleStatus("VENDIDO")} className="gap-2">
+            <BadgeCheck className="h-4 w-4 text-zinc-600" />
+            Vendido
           </DropdownMenuItem>
         )}
         {statusAtual !== "BAIXADO" && (

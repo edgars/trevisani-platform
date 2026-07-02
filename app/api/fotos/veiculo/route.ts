@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/client";
-import { uploadFoto, getPublicUrl } from "@/lib/storage/supabase";
+import { uploadFoto, getPublicUrl, FOTOS_BUCKET } from "@/lib/storage/supabase";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 
-  const url = getPublicUrl(storagePath);
+  const url = getPublicUrl(FOTOS_BUCKET, storagePath);
 
   // Conta fotos existentes para definir ordem
   const totalFotos = await prisma.fotoVeiculo.count({ where: { veiculoId } });

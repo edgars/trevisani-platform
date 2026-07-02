@@ -37,6 +37,9 @@ export const authConfig = {
         return true;
       }
 
+      // Vitrine pública por tenant (reescrita pelo middleware para /site/[slug]/...)
+      if (path.startsWith("/site/")) return true;
+
       // /t/[slug]/publico/... é público (portal do fornecedor futuramente)
       if (path.includes("/publico")) return true;
 

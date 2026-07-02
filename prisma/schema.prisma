@@ -40,6 +40,7 @@ enum StatusAssinaturaPlataforma {
 }
 
 enum StatusVeiculo {
+  NEGOCIANDO
   DISPONIVEL
   RESERVADO
   VENDIDO
@@ -177,6 +178,20 @@ enum TipoIntegracao {
   CONSULTA_VEICULAR
 }
 
+enum TemaWebsite {
+  CLASSICO
+  MODERNO
+  MINIMAL
+}
+
+enum FonteWebsite {
+  INTER
+  POPPINS
+  ROBOTO
+  LATO
+  MONTSERRAT
+}
+
 // =========================================================================
 // PLATAFORMA (sem tenantId)
 // =========================================================================
@@ -211,6 +226,39 @@ model Plano {
   tenants     Tenant[]
 
   @@map("plano")
+}
+
+// Cache compartilhado de consultas públicas (Receita Federal / CEP).
+// Dados públicos: sem tenantId de propósito — todos os tenants aproveitam.
+
+model CnpjCache {
+  cnpj         String   @id // 14 dígitos
+  payload      Json        // retorno bruto da OpenCNPJ
+  consultadoEm DateTime @updatedAt
+
+  @@map("cnpj_cache")
+}
+
+model CepCache {
+  cep          String   @id // 8 dígitos
+  logradouro   String?
+  bairro       String?
+  cidade       String?
+  uf           String?
+  consultadoEm DateTime @updatedAt
+
+  @@map("cep_cache")
+}
+
+// Cache de consulta de placas via wdapi2.com.br.
+// Compartilhado entre todos os tenants (dados públicos do DENATRAN).
+// TTL de 60 dias — revalidado automaticamente na próxima consulta.
+model PlacaCache {
+  placa        String   @id // formato normalizado: sem hífen, uppercase (ex: ABC1D23)
+  payload      Json     // resposta bruta da API (inclui campo "extra" quando disponível)
+  consultadoEm DateTime @updatedAt
+
+  @@map("placa_cache")
 }
 
 model AssinaturaPlataforma {
@@ -273,6 +321,7 @@ model Tenant {
   mensagensWhatsapp    MensagemWhatsapp[]
   notificacoes         Notificacao[]
   auditLogs            AuditLog[]
+  websiteConfig        WebsiteConfig?
 
   @@index([status])
   @@map("tenant")
@@ -422,7 +471,7 @@ model Fornecedor {
   documento    String                  // CPF ou CNPJ (somente dígitos)
   email        String?
   telefone     String?
-  // Endereço (auto-preenchido via ViaCEP)
+  // Endereço (auto-preenchido via ViaCEP ou consulta CNPJ)
   cep          String?
   logradouro   String?
   numero       String?
@@ -430,6 +479,12 @@ model Fornecedor {
   bairro       String?
   cidade       String?
   estado       String?                 // UF (2 letras)
+  // Dados da Receita Federal (apenas PJ, via OpenCNPJ)
+  situacaoCadastral    String?
+  naturezaJuridica     String?
+  porteEmpresa         String?
+  dataInicioAtividade  DateTime?
+  dadosCnpjJson        Json?           // payload bruto da última consulta (auditoria)
   observacoes  String?
   ativo        Boolean    @default(true)
   createdAt    DateTime   @default(now())
@@ -437,6 +492,7 @@ model Fornecedor {
 
   tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   usuario Usuario?
+  cnaes   FornecedorCnae[]
   ofertas OfertaVeiculo[]
   pacotes PacoteOferta[]
   compras Compra[]
@@ -444,6 +500,20 @@ model Fornecedor {
   @@unique([tenantId, documento])
   @@index([tenantId, nome])
   @@map("fornecedor")
+}
+
+// CNAEs do fornecedor PJ (principal + secundários), vindos da consulta CNPJ.
+model FornecedorCnae {
+  id           String  @id @default(cuid())
+  fornecedorId String
+  codigo       String
+  descricao    String
+  principal    Boolean @default(false)
+
+  fornecedor Fornecedor @relation(fields: [fornecedorId], references: [id], onDelete: Cascade)
+
+  @@unique([fornecedorId, codigo])
+  @@map("fornecedor_cnae")
 }
 
 model ClienteFinal {
@@ -904,6 +974,37 @@ model Notificacao {
 
   @@index([tenantId, usuarioId])
   @@map("notificacao")
+}
+
+// =========================================================================
+// WEBSITE / VITRINE POR TENANT
+// =========================================================================
+
+model WebsiteConfig {
+  id            String       @id @default(cuid())
+  tenantId      String       @unique
+  publicado     Boolean      @default(false)
+  tema          TemaWebsite  @default(CLASSICO)
+  corPrimaria   String       @default("#0f172a")
+  corDestaque   String       @default("#e11d48")
+  fonte         FonteWebsite @default(INTER)
+  logoUrl       String?
+  faviconUrl    String?
+  heroTitulo    String?
+  heroSubtitulo String?
+  sobre         String?      @db.Text
+  telefone      String?
+  whatsapp      String?
+  endereco      String?
+  instagram     String?
+  seoTitulo     String?
+  seoDescricao  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("website_config")
 }
 
 // =========================================================================

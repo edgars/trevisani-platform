@@ -163,7 +163,10 @@ export default async function FornecedoresPage({
                   {fornecedores.map((f) => (
                     <tr key={f.id} className="transition-colors hover:bg-muted/20">
                       <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
+                        <Link
+                          href={`/t/${slug}/fornecedores/${f.id}/editar`}
+                          className="group flex items-center gap-2"
+                        >
                           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
                             {f.tipoPessoa === "PJ" ? (
                               <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -172,12 +175,12 @@ export default async function FornecedoresPage({
                             )}
                           </div>
                           <div>
-                            <div className="font-medium">{f.nome}</div>
+                            <div className="font-medium group-hover:underline">{f.nome}</div>
                             {f.razaoSocial && (
                               <div className="text-xs text-muted-foreground">{f.razaoSocial}</div>
                             )}
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
                         {formatDoc(f.documento, f.tipoPessoa)}
@@ -190,9 +193,11 @@ export default async function FornecedoresPage({
                         {f.cidade && f.estado ? `${f.cidade} / ${f.estado}` : "—"}
                       </td>
                       <td className="px-5 py-3 text-center">
-                        <span className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-muted px-2 text-xs font-medium">
-                          {f._count.compras}
-                        </span>
+                        <Link href={`/t/${slug}/compras?fornecedorId=${f.id}`} className="group">
+                          <span className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-muted px-2 text-xs font-medium group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                            {f._count.compras}
+                          </span>
+                        </Link>
                       </td>
                       <td className="px-5 py-3">
                         <Badge variant={f.ativo ? "success" : "secondary"}>

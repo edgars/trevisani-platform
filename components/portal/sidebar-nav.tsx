@@ -8,6 +8,7 @@ import {
   Car,
   CreditCard,
   FileSignature,
+  Globe,
   LayoutDashboard,
   type LucideIcon,
   Package,
@@ -36,6 +37,7 @@ export const NAV_ICONS = {
   car: Car,
   creditcard: CreditCard,
   filesignature: FileSignature,
+  globe: Globe,
   layoutdashboard: LayoutDashboard,
   package: Package,
   pluscircle: PlusCircle,
@@ -55,33 +57,77 @@ export interface NavItem {
   href: string;
   label: string;
   icon: NavIconName;
+  /** Rótulo do grupo na sidebar (ex.: "Catálogo"). Itens consecutivos com o
+   * mesmo grupo são renderizados sob o mesmo cabeçalho. */
+  group?: string;
 }
 
-export function SidebarNav({ items }: { items: NavItem[] }) {
+interface NavGroup {
+  label?: string;
+  items: NavItem[];
+}
+
+/** Agrupa itens consecutivos que compartilham o mesmo `group`. */
+export function groupNavItems(items: NavItem[]): NavGroup[] {
+  const groups: NavGroup[] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.label === item.group) {
+      last.items.push(item);
+    } else {
+      groups.push({ label: item.group, items: [item] });
+    }
+  }
+  return groups;
+}
+
+export function SidebarNav({
+  items,
+  collapsed = false,
+}: {
+  items: NavItem[];
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
+  const groups = groupNavItems(items);
+
   return (
-    <nav className="grid gap-0.5 px-3 py-2 text-sm">
-      {items.map((item) => {
-        const Icon = NAV_ICONS[item.icon];
-        const active =
-          pathname === item.href ||
-          (item.href !== "/" && pathname?.startsWith(item.href + "/"));
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 transition-colors",
-              active
-                ? "bg-sidebar-active-bg text-sidebar-active-fg font-medium shadow-sm"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav className={cn("flex flex-col gap-4 py-2 text-sm", collapsed ? "px-2" : "px-3")}>
+      {groups.map((group, gi) => (
+        <div key={group.label ?? gi} className="grid gap-0.5">
+          {group.label && !collapsed && (
+            <p className="px-3 pb-1 pt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              {group.label}
+            </p>
+          )}
+          {group.label && collapsed && gi > 0 && (
+            <div className="mx-2 mb-1 border-t border-sidebar-border" />
+          )}
+          {group.items.map((item) => {
+            const Icon = NAV_ICONS[item.icon];
+            const active =
+              pathname === item.href ||
+              (item.href !== "/" && pathname?.startsWith(item.href + "/"));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg py-2 transition-colors",
+                  collapsed ? "justify-center px-0" : "px-3",
+                  active
+                    ? "bg-sidebar-active-bg text-sidebar-active-fg font-medium shadow-sm"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }

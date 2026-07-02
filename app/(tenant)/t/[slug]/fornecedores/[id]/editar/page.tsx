@@ -25,12 +25,18 @@ export default async function EditarFornecedorPage({
 
   const fornecedor = await prisma.fornecedor.findFirst({
     where: { id, tenantId },
+    include: {
+      cnaes: {
+        orderBy: [{ principal: "desc" }, { codigo: "asc" }],
+        select: { codigo: true, descricao: true, principal: true },
+      },
+    },
   });
 
   if (!fornecedor) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="icon" className="h-8 w-8">
           <Link href={`/t/${slug}/fornecedores`}>
@@ -61,6 +67,13 @@ export default async function EditarFornecedorPage({
           cidade:      fornecedor.cidade,
           estado:      fornecedor.estado,
           observacoes: fornecedor.observacoes,
+          situacaoCadastral:   fornecedor.situacaoCadastral,
+          naturezaJuridica:    fornecedor.naturezaJuridica,
+          porteEmpresa:        fornecedor.porteEmpresa,
+          dataInicioAtividade: fornecedor.dataInicioAtividade
+            ? fornecedor.dataInicioAtividade.toISOString().slice(0, 10)
+            : null,
+          cnaes: fornecedor.cnaes,
         }}
       />
     </div>

@@ -3,24 +3,28 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, MapPin, Search } from "lucide-react";
+import { Building2, Loader2, MapPin, Search } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { criarFornecedorAction, atualizarFornecedorAction } from "../actions";
+import {
+  criarFornecedorAction,
+  atualizarFornecedorAction,
+  consultarCnpjAction,
+  consultarCepAction,
+} from "../actions";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type TipoPessoa = "PF" | "PJ";
 
-interface ViaCepResult {
-  logradouro: string;
-  bairro: string;
-  localidade: string; // cidade
-  uf: string;
-  erro?: boolean;
+export interface FornecedorCnaeData {
+  codigo: string;
+  descricao: string;
+  principal: boolean;
 }
 
 export interface FornecedorData {
@@ -39,6 +43,11 @@ export interface FornecedorData {
   cidade?: string | null;
   estado?: string | null;
   observacoes?: string | null;
+  situacaoCadastral?: string | null;
+  naturezaJuridica?: string | null;
+  porteEmpresa?: string | null;
+  dataInicioAtividade?: string | null; // ISO
+  cnaes?: FornecedorCnaeData[];
 }
 
 interface Props {
@@ -81,6 +90,11 @@ function mascaraTelefone(v: string) {
   return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
 }
 
+function mascaraCnae(codigo: string) {
+  // 8219999 → 8219-9/99
+  return codigo.replace(/^(\d{4})(\d)(\d{2})$/, "$1-$2/$3");
+}
+
 // ─── Componente de campo com label ────────────────────────────────────────────
 
 function Field({
@@ -118,13 +132,16 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
   // ─ Documento com máscara ─
   const [documento, setDocumento] = useState(
     fornecedor?.documento
-      ? tipo === "PF"
+      ? fornecedor.tipoPessoa === "PF"
         ? mascaraCPF(fornecedor.documento)
         : mascaraCNPJ(fornecedor.documento)
       : "",
   );
 
-  // ─ Telefone com máscara ─
+  // ─ Dados básicos (controlados para permitir auto-preenchimento) ─
+  const [razaoSocial, setRazaoSocial] = useState(fornecedor?.razaoSocial ?? "");
+  const [nome, setNome] = useState(fornecedor?.nome ?? "");
+  const [email, setEmail] = useState(fornecedor?.email ?? "");
   const [telefone, setTelefone] = useState(
     fornecedor?.telefone ? mascaraTelefone(fornecedor.telefone) : "",
   );
@@ -135,10 +152,27 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
   );
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [logradouro, setLogradouro] = useState(fornecedor?.logradouro ?? "");
+  const [numero, setNumero] = useState(fornecedor?.numero ?? "");
+  const [complemento, setComplemento] = useState(fornecedor?.complemento ?? "");
   const [bairro, setBairro] = useState(fornecedor?.bairro ?? "");
   const [cidade, setCidade] = useState(fornecedor?.cidade ?? "");
   const [estado, setEstado] = useState(fornecedor?.estado ?? "");
   const numeroRef = useRef<HTMLInputElement>(null);
+
+  // ─ Dados da Receita (consulta CNPJ) ─
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [situacaoCadastral, setSituacaoCadastral] = useState(
+    fornecedor?.situacaoCadastral ?? "",
+  );
+  const [naturezaJuridica, setNaturezaJuridica] = useState(
+    fornecedor?.naturezaJuridica ?? "",
+  );
+  const [porteEmpresa, setPorteEmpresa] = useState(fornecedor?.porteEmpresa ?? "");
+  const [dataInicioAtividade, setDataInicioAtividade] = useState(
+    fornecedor?.dataInicioAtividade ?? "",
+  );
+  const [cnaes, setCnaes] = useState<FornecedorCnaeData[]>(fornecedor?.cnaes ?? []);
+  const [dadosCnpjRaw, setDadosCnpjRaw] = useState<string>("");
 
   // ─ Server Action ─
   const action = isEdicao
@@ -151,6 +185,45 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
     if (state?.error) toast.error(state.error);
   }, [state]);
 
+  // ─ Consulta CNPJ (OpenCNPJ) ────────────────────────────────────────────────
+
+  async function buscarCnpj() {
+    const digitos = documento.replace(/\D/g, "");
+    if (digitos.length !== 14) {
+      toast.error("Informe o CNPJ completo (14 dígitos).");
+      return;
+    }
+    setBuscandoCnpj(true);
+    try {
+      const result = await consultarCnpjAction(digitos);
+      if (result.error || !result.data) {
+        toast.error(result.error ?? "Erro na consulta do CNPJ.");
+        return;
+      }
+      const d = result.data;
+      setRazaoSocial(d.razaoSocial);
+      setNome(d.nomeFantasia);
+      if (d.email) setEmail(d.email);
+      if (d.telefone) setTelefone(mascaraTelefone(d.telefone));
+      if (d.cep) setCep(mascaraCEP(d.cep));
+      setLogradouro(d.logradouro);
+      setNumero(d.numero);
+      setComplemento(d.complemento);
+      setBairro(d.bairro);
+      setCidade(d.cidade);
+      setEstado(d.estado);
+      setSituacaoCadastral(d.situacaoCadastral);
+      setNaturezaJuridica(d.naturezaJuridica);
+      setPorteEmpresa(d.porteEmpresa);
+      setDataInicioAtividade(d.dataInicioAtividade);
+      setCnaes(d.cnaes);
+      setDadosCnpjRaw(JSON.stringify(d.raw));
+      toast.success(`Dados de ${d.razaoSocial} carregados.`);
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  }
+
   // ─ Busca ViaCEP ───────────────────────────────────────────────────────────
 
   async function buscarCep(cepFormatado: string) {
@@ -158,19 +231,16 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
     if (digitos.length !== 8) return;
     setBuscandoCep(true);
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
-      const data: ViaCepResult = await res.json();
-      if (data.erro) {
-        toast.error("CEP não encontrado.");
+      const result = await consultarCepAction(digitos);
+      if (result.error || !result.data) {
+        toast.error(result.error ?? "Erro ao consultar o CEP.");
         return;
       }
-      setLogradouro(data.logradouro);
-      setBairro(data.bairro);
-      setCidade(data.localidade);
-      setEstado(data.uf);
+      setLogradouro(result.data.logradouro);
+      setBairro(result.data.bairro);
+      setCidade(result.data.cidade);
+      setEstado(result.data.uf);
       setTimeout(() => numeroRef.current?.focus(), 50);
-    } catch {
-      toast.error("Erro ao consultar o CEP. Verifique sua conexão.");
     } finally {
       setBuscandoCep(false);
     }
@@ -181,7 +251,19 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
   function handleTipoChange(novoTipo: TipoPessoa) {
     setTipo(novoTipo);
     setDocumento("");
+    if (novoTipo === "PF") {
+      // PF não tem dados da Receita nem CNAEs
+      setSituacaoCadastral("");
+      setNaturezaJuridica("");
+      setPorteEmpresa("");
+      setDataInicioAtividade("");
+      setCnaes([]);
+      setDadosCnpjRaw("");
+    }
   }
+
+  const cnaePrincipal = cnaes.find((c) => c.principal);
+  const cnaesSecundarios = cnaes.filter((c) => !c.principal);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -214,16 +296,80 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
       {/* ── Dados básicos ────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Dados do fornecedor</CardTitle>
+          <CardTitle className="flex items-center justify-between text-base">
+            Dados do fornecedor
+            {tipo === "PJ" && situacaoCadastral && (
+              <Badge
+                variant={situacaoCadastral === "Ativa" ? "success" : "warning"}
+              >
+                {situacaoCadastral}
+              </Badge>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
+          {/* CNPJ primeiro, com busca automática (apenas PJ) */}
+          {tipo === "PJ" ? (
+            <div className="sm:col-span-2">
+              <Field
+                label="CNPJ"
+                required
+                hint="Pressione Enter ou clique em Buscar para preencher os dados automaticamente."
+              >
+                <div className="flex gap-2">
+                  <Input
+                    name="documento"
+                    value={documento}
+                    onChange={(e) => setDocumento(mascaraCNPJ(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        buscarCnpj();
+                      }
+                    }}
+                    placeholder="00.000.000/0001-00"
+                    required
+                    className="max-w-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      buscandoCnpj || documento.replace(/\D/g, "").length !== 14
+                    }
+                    onClick={buscarCnpj}
+                    className="gap-2"
+                  >
+                    {buscandoCnpj ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Buscar
+                  </Button>
+                </div>
+              </Field>
+            </div>
+          ) : (
+            <Field label="CPF" required>
+              <Input
+                name="documento"
+                value={documento}
+                onChange={(e) => setDocumento(mascaraCPF(e.target.value))}
+                placeholder="000.000.000-00"
+                required
+              />
+            </Field>
+          )}
+
           {tipo === "PJ" && (
             <div className="sm:col-span-2">
               <Field label="Razão Social" required>
                 <Input
                   name="razaoSocial"
                   placeholder="Empresa Comércio de Veículos Ltda."
-                  defaultValue={fornecedor?.razaoSocial ?? ""}
+                  value={razaoSocial}
+                  onChange={(e) => setRazaoSocial(e.target.value)}
                   required
                 />
               </Field>
@@ -234,23 +380,8 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
             <Input
               name="nome"
               placeholder={tipo === "PJ" ? "Auto Brasil" : "João da Silva"}
-              defaultValue={fornecedor?.nome ?? ""}
-              required
-            />
-          </Field>
-
-          <Field label={tipo === "PJ" ? "CNPJ" : "CPF"} required>
-            <Input
-              name="documento"
-              value={documento}
-              onChange={(e) =>
-                setDocumento(
-                  tipo === "PF"
-                    ? mascaraCPF(e.target.value)
-                    : mascaraCNPJ(e.target.value),
-                )
-              }
-              placeholder={tipo === "PJ" ? "00.000.000/0001-00" : "000.000.000-00"}
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
               required
             />
           </Field>
@@ -260,7 +391,8 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
               name="email"
               type="email"
               placeholder="contato@empresa.com.br"
-              defaultValue={fornecedor?.email ?? ""}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </Field>
 
@@ -272,8 +404,78 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
               placeholder="(11) 99999-9999"
             />
           </Field>
+
+          {/* Dados da Receita (somente leitura, preenchidos pela consulta) */}
+          {tipo === "PJ" && (naturezaJuridica || porteEmpresa) && (
+            <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
+              <Field label="Natureza jurídica">
+                <Input value={naturezaJuridica} readOnly className="bg-muted/40" />
+              </Field>
+              <Field label="Porte">
+                <Input value={porteEmpresa} readOnly className="bg-muted/40" />
+              </Field>
+              <Field label="Início de atividade">
+                <Input
+                  value={
+                    dataInicioAtividade
+                      ? new Date(dataInicioAtividade + "T00:00:00").toLocaleDateString("pt-BR")
+                      : ""
+                  }
+                  readOnly
+                  className="bg-muted/40"
+                />
+              </Field>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* ── CNAEs (apenas PJ, vindos da consulta) ────────────────────────── */}
+      {tipo === "PJ" && cnaes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              Atividades econômicas (CNAE)
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+                {cnaes.length}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {cnaePrincipal && (
+              <div className="flex items-start gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+                <Badge variant="default" className="mt-0.5 shrink-0">
+                  Principal
+                </Badge>
+                <div className="min-w-0">
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {mascaraCnae(cnaePrincipal.codigo)}
+                  </p>
+                  <p className="text-sm">{cnaePrincipal.descricao}</p>
+                </div>
+              </div>
+            )}
+            {cnaesSecundarios.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Secundários
+                </p>
+                <ul className="divide-y rounded-lg border">
+                  {cnaesSecundarios.map((c) => (
+                    <li key={c.codigo} className="flex items-baseline gap-3 px-3 py-2">
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                        {mascaraCnae(c.codigo)}
+                      </span>
+                      <span className="text-sm">{c.descricao}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Endereço (ViaCEP) ─────────────────────────────────────────────── */}
       <Card>
@@ -324,22 +526,22 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
                 value={logradouro}
                 onChange={(e) => setLogradouro(e.target.value)}
                 placeholder="Rua, Av., etc."
-                readOnly={!!logradouro && !buscandoCep}
-                className={logradouro ? "bg-muted/40" : ""}
               />
             </Field>
             <Field label="Número" required={!!cep}>
               <Input
                 ref={numeroRef}
                 name="numero"
-                defaultValue={fornecedor?.numero ?? ""}
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
                 placeholder="123"
               />
             </Field>
             <Field label="Complemento" hint="Apto, sala, andar…">
               <Input
                 name="complemento"
-                defaultValue={fornecedor?.complemento ?? ""}
+                value={complemento}
+                onChange={(e) => setComplemento(e.target.value)}
                 placeholder="Apto 42"
               />
             </Field>
@@ -353,8 +555,6 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
                 value={bairro}
                 onChange={(e) => setBairro(e.target.value)}
                 placeholder="Centro"
-                readOnly={!!bairro && !buscandoCep}
-                className={bairro ? "bg-muted/40" : ""}
               />
             </Field>
             <Field label="Cidade">
@@ -363,8 +563,6 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
                 value={cidade}
                 onChange={(e) => setCidade(e.target.value)}
                 placeholder="São Paulo"
-                readOnly={!!cidade && !buscandoCep}
-                className={cidade ? "bg-muted/40" : ""}
               />
             </Field>
             <Field label="UF">
@@ -373,8 +571,6 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
                 value={estado}
                 onChange={(e) => setEstado(e.target.value.toUpperCase().slice(0, 2))}
                 placeholder="SP"
-                readOnly={!!estado && !buscandoCep}
-                className={estado ? "bg-muted/40" : ""}
                 maxLength={2}
               />
             </Field>
@@ -397,6 +593,20 @@ export function FornecedorForm({ slug, fornecedor }: Props) {
           />
         </CardContent>
       </Card>
+
+      {/* ── Dados da Receita para o submit (hidden) ──────────────────────── */}
+      {tipo === "PJ" && (
+        <>
+          <input type="hidden" name="situacaoCadastral" value={situacaoCadastral} />
+          <input type="hidden" name="naturezaJuridica" value={naturezaJuridica} />
+          <input type="hidden" name="porteEmpresa" value={porteEmpresa} />
+          <input type="hidden" name="dataInicioAtividade" value={dataInicioAtividade} />
+          <input type="hidden" name="cnaesJson" value={JSON.stringify(cnaes)} />
+          {dadosCnpjRaw && (
+            <input type="hidden" name="dadosCnpjJson" value={dadosCnpjRaw} />
+          )}
+        </>
+      )}
 
       {/* ── Ações ────────────────────────────────────────────────────────── */}
       <div className="flex justify-end gap-3">

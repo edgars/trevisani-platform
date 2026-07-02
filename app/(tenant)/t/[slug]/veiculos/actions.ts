@@ -165,6 +165,13 @@ export async function atualizarVeiculoAction(
   }
   const data = parsed.data;
 
+  // Estágio do ciclo de vendas (opcional no form de edição)
+  const statusRaw = formData.get("status");
+  const statusParsed = statusRaw ? statusVeiculoSchema.safeParse(statusRaw) : null;
+  if (statusRaw && !statusParsed?.success) {
+    return { error: "Estágio inválido." };
+  }
+
   await prisma.veiculo.update({
     where: { id: veiculoId },
     data: {
@@ -187,6 +194,7 @@ export async function atualizarVeiculoAction(
       precoCustoCentavos: data.precoCustoCentavos,
       precoVendaCentavos: data.precoVendaCentavos,
       observacoes:        data.observacoes,
+      ...(statusParsed?.success ? { status: statusParsed.data } : {}),
     },
   });
 
@@ -196,15 +204,27 @@ export async function atualizarVeiculoAction(
 
 // ─── Atualizar status ─────────────────────────────────────────────────────────
 
+const statusVeiculoSchema = z.enum([
+  "NEGOCIANDO",
+  "DISPONIVEL",
+  "EM_PREPARACAO",
+  "RESERVADO",
+  "VENDIDO",
+  "BAIXADO",
+]);
+
 export async function atualizarStatusVeiculoAction(
   tenantSlug: string,
   veiculoId: string,
-  status: "DISPONIVEL" | "RESERVADO" | "EM_PREPARACAO" | "BAIXADO",
+  status: z.infer<typeof statusVeiculoSchema>,
 ): Promise<{ error?: string }> {
   const session = await requireSession();
   if (session.user.escopo !== "STAFF" && session.user.escopo !== "PLATAFORMA") {
     return { error: "Sem permissão." };
   }
+
+  const parsedStatus = statusVeiculoSchema.safeParse(status);
+  if (!parsedStatus.success) return { error: "Status inválido." };
 
   const tenantId =
     session.user.escopo === "PLATAFORMA"
@@ -219,7 +239,7 @@ export async function atualizarStatusVeiculoAction(
 
   await prisma.veiculo.update({
     where: { id: veiculoId },
-    data: { status: status as any },
+    data: { status: parsedStatus.data },
   });
 
   revalidatePath(`/t/${tenantSlug}/veiculos`);

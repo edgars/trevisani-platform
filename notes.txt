@@ -1,0 +1,26 @@
+Para um sistema de gestão de lojas de compra e venda de carros (revendas e concessionárias), a consulta de placas via API é o motor que automatiza a entrada de estoque, a avaliação e a precificação.
+Um sistema completo para gerir tudo isso deve integrar o fluxo de dados desde a captação do veículo até a venda final.
+
+Fluxo de Automação com APIs de Placas
+Ao digitar a placa no seu sistema de gestão, o software deve disparar requisições automáticas para preencher a ficha do carro:
+Cadastro Automatizado: A API retorna marca, modelo, ano/modelo, cor e chassi, eliminando erros humanos de digitação.
+Precificação de Compra: O sistema usa o modelo retornado para consultar a FIPE API e sugerir uma margem de lucro (ex: pagar 80% da FIPE).
+Histórico e Segurança: Identifica se o veículo tem restrições de roubo, leilão ou sinistro antes de fechar o negócio.
+
+Módulos Essenciais do Sistema de Gestão
+Para gerenciar o negócio de ponta a ponta, seu software precisa de cinco pilares principais:
+1. Módulo de Avaliação e Captação
+Ficha de Inspeção digital: Checklist de lataria, motor, pneus e estofado via aplicativo móvel.
+Cálculo de Custos de Preparação: Campo para registrar quanto a loja gastará com oficina ou estética antes de expor o carro (o que reduz o valor de compra).
+2. Gestão de Estoque (Inventário)
+Status do Veículo: Organização visual (ex: Em Preparação, Disponível, Reservado, Vendido).
+Custo Real de Estoque: Soma do valor pago no carro + custos de reparação + comissões, gerando o custo real exato.
+3. CRM e Funil de Vendas
+Atendimento de Leads: Integração com portais de anúncios (Webmotors, OLX) para centralizar os clientes interessados.
+Histórico do Cliente: Registro de propostas, simulações de financiamento e carros que o cliente deixou na troca (troca com troco).
+4. Faturamento e Documentação
+Emissão de Notas Fiscais: Emissão de NF-e de Entrada (compra), NF-e de Saída (venda) e a NF-e de Devolução.
+Controle de Despachante: Status de transferência de propriedade, pagamento de IPVA atrasado e multas.
+5. Módulo Financeiro e Relatórios
+DRE por Veículo: Relatório que mostra exatamente o lucro líquido gerado por cada placa vendida.
+Giro de Estoque: Indicador de quantos dias, em média, um carro fica parado na loja (fundamental para o fluxo de caixa).

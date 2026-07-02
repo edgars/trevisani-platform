@@ -217,6 +217,29 @@ async function main() {
     });
   }
 
+  console.log("Criando WebsiteConfig para o tenant demo...");
+  await prisma.websiteConfig.upsert({
+    where: { tenantId: tenant.id },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      publicado: true,
+      tema: "CLASSICO",
+      corPrimaria: "#0f172a",
+      corDestaque: "#e11d48",
+      fonte: "INTER",
+      heroTitulo: "Os melhores carros da região",
+      heroSubtitulo: "Encontre o carro perfeito para você com as melhores condições.",
+      sobre: "Somos a Loja Demo, uma revenda de confiança com anos de experiência no mercado automotivo. Nosso compromisso é oferecer veículos de qualidade com transparência e segurança.",
+      telefone: "(11) 99999-0000",
+      whatsapp: "5511999990000",
+      endereco: "Av. Paulista, 1000 – São Paulo, SP",
+      instagram: "lojademo",
+      seoTitulo: "Loja Demo – Compra e Venda de Veículos",
+      seoDescricao: "Encontre os melhores veículos na Loja Demo. Estoque sempre renovado, financiamento facilitado e atendimento personalizado.",
+    },
+  });
+
   console.log("\n✓ Seed concluído.");
   console.log(`  Plataforma: ${plataforma.nome}`);
   console.log(`  Planos: ${planoStarter.slug}, ${planoPro.slug}`);

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" role="img" aria-label="Volante7">
+  <title>Volante7</title>
+  <!-- Outer ring (annulus) -->
+  <path fill-rule="evenodd" d="
+    M256 16
+    C123.5 16 16 123.5 16 256
+    S123.5 496 256 496
+    S496 388.5 496 256
+    S388.5 16 256 16Z
+    M256 64
+    C361.9 64 448 150.1 448 256
+    S361.9 448 256 448
+    S64 361.9 64 256
+    S150.1 64 256 64Z
+  "/>
+  <!-- Inner ring (thinner, creates double-ring look) -->
+  <path fill-rule="evenodd" d="
+    M256 80
+    C144.6 80 54.4 165.7 48.3 274
+    C48.1 268.1 48 262.1 48 256
+    C48 132.3 132.3 48 256 48
+    C379.7 48 464 132.3 464 256
+    C464 262.1 463.9 268.1 463.7 274
+    C457.6 165.7 367.4 80 256 80Z
+  " opacity="0.15"/>
+  <!-- 3 spokes: bottom (270°), upper-left (30°), upper-right (150°) -->
+  <!-- spoke down: x=244 from y=296 to y=432 (hub edge to inner ring), w=24 -->
+  <rect x="244" y="296" width="24" height="136" rx="12"/>
+  <!-- spoke upper-left (210°): rotate -120° around center -->
+  <g transform="rotate(-120 256 256)">
+    <rect x="244" y="296" width="24" height="136" rx="12"/>
+  </g>
+  <!-- spoke upper-right (330°): rotate +120° around center -->
+  <g transform="rotate(120 256 256)">
+    <rect x="244" y="296" width="24" height="136" rx="12"/>
+  </g>
+  <!-- Hub -->
+  <circle cx="256" cy="256" r="44"/>
+</svg>
