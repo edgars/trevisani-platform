@@ -13,7 +13,7 @@ const RESERVED_SUBDOMAINS = new Set(["www", "app", "admin", "api", "mail", "smtp
 /**
  * Middleware principal.
  *
- * 1. Se a requisição vem de um subdomínio de ROOT_DOMAIN (ex: demo.volan.com.br),
+ * 1. Se a requisição vem de um subdomínio de ROOT_DOMAIN (ex: demo.volante7.com.br),
  *    reescreve internamente para /site/[slug]/... — sem redirecionar o browser.
  * 2. Em dev local, demo.localhost:3000 segue a mesma lógica.
  * 3. Para o domínio raiz e subdomínios reservados, passa pelo Auth.js

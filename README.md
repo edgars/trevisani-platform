@@ -93,16 +93,16 @@ Abra [http://localhost:3000](http://localhost:3000).
 - **Super Admin** (painel da plataforma): `admin@autogestao.com` / `admin@123` → `/admin`
 - **Admin do tenant demo**: slug `demo`, `admin@demo.com` / `demo@123` → `/t/demo`
 
-## Website / Vitrine por tenant (volan.com.br)
+## Website / Vitrine por tenant (volante7.com.br)
 
-Cada tenant tem uma vitrine pública no subdomínio `{slug}.volan.com.br` (ex: `demo.volan.com.br`).
+Cada tenant tem uma vitrine pública no subdomínio `{slug}.volante7.com.br` (ex: `demo.volante7.com.br`).
 
 ### Configuração de DNS na Vercel
 
 O certificado wildcard é emitido pela Vercel via desafio DNS-01, portanto o
 domínio precisa usar os **nameservers da Vercel**:
 
-1. No registrador de `volan.com.br` ([Registro.br](https://registro.br)), troque os
+1. No registrador de `volante7.com.br` ([Registro.br](https://registro.br)), troque os
    nameservers para:
    ```
    ns1.vercel-dns.com
@@ -113,16 +113,16 @@ domínio precisa usar os **nameservers da Vercel**:
    controle dos nameservers):
    | Domínio | Tipo |
    |---|---|
-   | `volan.com.br` | Apex (A/ALIAS) |
-   | `www.volan.com.br` | CNAME → cname.vercel-dns.com |
-   | `*.volan.com.br` | Wildcard |
+   | `volante7.com.br` | Apex (A/ALIAS) |
+   | `www.volante7.com.br` | CNAME → cname.vercel-dns.com |
+   | `*.volante7.com.br` | Wildcard |
 3. Aguarde a propagação (geralmente < 5 minutos). **Qualquer slug novo vira uma
    vitrine HTTPS automaticamente**, sem nenhuma configuração adicional.
 4. Recrie os registros de e-mail (MX, TXT/SPF/DKIM) no painel de DNS da Vercel.
 
 > **Variável de ambiente necessária em produção:**
 > ```
-> NEXT_PUBLIC_ROOT_DOMAIN=volan.com.br
+> NEXT_PUBLIC_ROOT_DOMAIN=volante7.com.br
 > ```
 
 ### Desenvolvimento local
@@ -139,7 +139,7 @@ A variável já está configurada como `localhost:3000` no `.env.local`.
 ### Fluxo de dados
 
 ```
-demo.volan.com.br  →  Middleware (edge)
+demo.volante7.com.br  →  Middleware (edge)
                         ↓ rewrite para /site/demo/
                    app/(website)/site/[slug]/layout.tsx
                         ↓ requireWebsite("demo")

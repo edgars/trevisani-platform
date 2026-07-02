@@ -93,7 +93,7 @@ export function ModernoLayout({
           </div>
           <div className="mt-6 text-xs text-neutral-600 text-center">
             © {new Date().getFullYear()} {tenantNome} · Vitrine por{" "}
-            <a href="https://volan.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-400">
+            <a href="https://volante7.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-400">
               Volan
             </a>
           </div>

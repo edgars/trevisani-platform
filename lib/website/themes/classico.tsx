@@ -146,7 +146,7 @@ export function ClassicoLayout({
           <div className="mt-8 border-t border-white/20 pt-6 text-center text-xs opacity-50">
             © {new Date().getFullYear()} {tenantNome}. Vitrine criada com{" "}
             <a
-              href="https://volan.com.br"
+              href="https://volante7.com.br"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80"

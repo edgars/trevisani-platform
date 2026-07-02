@@ -64,7 +64,7 @@ export function MinimalLayout({
           <p>{tenantNome}{config.endereco ? ` · ${config.endereco}` : ""}</p>
           <p>
             Vitrine por{" "}
-            <a href="https://volan.com.br" target="_blank" rel="noopener noreferrer" className="hover:underline">
+            <a href="https://volante7.com.br" target="_blank" rel="noopener noreferrer" className="hover:underline">
               Volan
             </a>
           </p>
