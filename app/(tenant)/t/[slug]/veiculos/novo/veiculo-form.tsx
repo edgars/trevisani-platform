@@ -524,7 +524,7 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
                   <Select
                     value={modelo}
                     onValueChange={setModelo}
-                    disabled={isFormDisabled || (!marca && lookupStatus !== "found")}
+                    disabled={isFormDisabled || !marca}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={marca ? "Selecione o modelo" : "Selecione a marca primeiro"} />
