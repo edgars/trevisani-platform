@@ -111,6 +111,15 @@ enum TipoMovimento {
   SAIDA
 }
 
+enum TipoDocumentoVeiculo {
+  NOTA_FISCAL
+  LAUDO_VISTORIA
+  CERTIFICADO_PROPRIEDADE
+  CONTRATO
+  FOTO_DOCUMENTO  // foto de documento (ex: CRLV, CNH)
+  OUTRO
+}
+
 enum StatusFotoVeiculo {
   BATIDO        // foto tirada no recebimento com danos
   EM_REPARO     // foto durante a preparação/reparo
@@ -408,10 +417,19 @@ model Fornecedor {
   id           String     @id @default(cuid())
   tenantId     String
   tipoPessoa   TipoPessoa @default(PJ)
-  nome         String
-  documento    String     // CPF ou CNPJ
+  nome         String                  // nome completo (PF) ou nome fantasia (PJ)
+  razaoSocial  String?                 // razão social (PJ)
+  documento    String                  // CPF ou CNPJ (somente dígitos)
   email        String?
   telefone     String?
+  // Endereço (auto-preenchido via ViaCEP)
+  cep          String?
+  logradouro   String?
+  numero       String?
+  complemento  String?
+  bairro       String?
+  cidade       String?
+  estado       String?                 // UF (2 letras)
   observacoes  String?
   ativo        Boolean    @default(true)
   createdAt    DateTime   @default(now())
@@ -484,6 +502,7 @@ model Veiculo {
 
   tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fotos      FotoVeiculo[]
+  documentos DocumentoVeiculo[]
   ofertas    OfertaVeiculo[]
   itensCompra ItemCompra[]
   itensVenda  ItemVenda[]
@@ -510,6 +529,25 @@ model FotoVeiculo {
 
   @@index([veiculoId, ordem])
   @@map("foto_veiculo")
+}
+
+model DocumentoVeiculo {
+  id           String                 @id @default(cuid())
+  veiculoId    String
+  nome         String
+  url          String
+  storagePath  String
+  mimeType     String
+  tamanhoBytes Int                    @default(0)
+  tipo         TipoDocumentoVeiculo   @default(OUTRO)
+  anotacao     String?                @db.Text
+  tags         String[]               @default([])
+  createdAt    DateTime               @default(now())
+
+  veiculo Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+
+  @@index([veiculoId])
+  @@map("documento_veiculo")
 }
 
 model OfertaVeiculo {

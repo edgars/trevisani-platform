@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Images, FolderOpen } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,7 @@ export default async function EstoquePage({
       precoCustoCentavos: true,
       precoVendaCentavos: true,
       status: true,
+      _count: { select: { fotos: true, documentos: true } },
     },
   });
 
@@ -150,6 +151,7 @@ export default async function EstoquePage({
                     <th className="px-5 py-3 text-right">Custo</th>
                     <th className="px-5 py-3 text-right">Venda</th>
                     <th className="px-5 py-3 text-left">Status</th>
+                    <th className="px-5 py-3 text-center">Pasta</th>
                     <th className="px-5 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -185,6 +187,27 @@ export default async function EstoquePage({
                         </td>
                         <td className="px-5 py-3">
                           <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                        </td>
+                        {/* Pasta: fotos + documentos */}
+                        <td className="px-5 py-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <Link
+                              href={`/t/${slug}/veiculos/${v.id}/fotos`}
+                              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-blue-600"
+                              title="Fotos"
+                            >
+                              <Images className="h-3.5 w-3.5" />
+                              {v._count.fotos}
+                            </Link>
+                            <Link
+                              href={`/t/${slug}/veiculos/${v.id}/arquivos`}
+                              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-amber-600"
+                              title="Documentos"
+                            >
+                              <FolderOpen className="h-3.5 w-3.5" />
+                              {v._count.documentos}
+                            </Link>
+                          </div>
                         </td>
                         <td className="px-5 py-3 text-right">
                           <EstoqueAcoes

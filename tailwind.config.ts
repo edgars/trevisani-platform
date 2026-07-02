@@ -18,7 +18,7 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-bricolage)", "Bricolage Grotesque", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

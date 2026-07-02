@@ -2,7 +2,16 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { MoreHorizontal, Trash2, CheckCircle, Clock, Archive, Images } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  CheckCircle,
+  Clock,
+  Archive,
+  Images,
+  FolderOpen,
+  Pencil,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -49,12 +58,28 @@ export function EstoqueAcoes({ slug, veiculoId, statusAtual }: Props) {
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52">
+        {/* Editar */}
+        <DropdownMenuItem asChild className="gap-2">
+          <Link href={`/t/${slug}/veiculos/${veiculoId}/editar`}>
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            Editar dados
+          </Link>
+        </DropdownMenuItem>
+
         {/* Fotos */}
         <DropdownMenuItem asChild className="gap-2">
           <Link href={`/t/${slug}/veiculos/${veiculoId}/fotos`}>
-            <Images className="h-4 w-4 text-muted-foreground" />
+            <Images className="h-4 w-4 text-blue-500" />
             Gerenciar fotos
+          </Link>
+        </DropdownMenuItem>
+
+        {/* Documentos */}
+        <DropdownMenuItem asChild className="gap-2">
+          <Link href={`/t/${slug}/veiculos/${veiculoId}/arquivos`}>
+            <FolderOpen className="h-4 w-4 text-amber-500" />
+            Documentos
           </Link>
         </DropdownMenuItem>
 

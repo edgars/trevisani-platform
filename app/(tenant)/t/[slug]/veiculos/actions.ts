@@ -115,6 +115,85 @@ export async function criarVeiculoAction(
   redirect(`/t/${tenantSlug}/veiculos`);
 }
 
+// ─── Atualizar dados do veículo ───────────────────────────────────────────────
+
+export async function atualizarVeiculoAction(
+  tenantSlug: string,
+  veiculoId: string,
+  _prevState: { error?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const session = await requireSession();
+  if (session.user.escopo !== "STAFF" && session.user.escopo !== "PLATAFORMA") {
+    return { error: "Sem permissão." };
+  }
+
+  const tenantId =
+    session.user.escopo === "PLATAFORMA"
+      ? (await requireTenantPorSlug(tenantSlug)).id
+      : session.user.tenantId!;
+
+  const veiculo = await prisma.veiculo.findFirst({ where: { id: veiculoId, tenantId } });
+  if (!veiculo) return { error: "Veículo não encontrado." };
+
+  const raw = {
+    tipo:               formData.get("tipo"),
+    marca:              formData.get("marca"),
+    modelo:             formData.get("modelo"),
+    versao:             formData.get("versao") || undefined,
+    anoFabricacao:      formData.get("anoFabricacao"),
+    anoModelo:          formData.get("anoModelo"),
+    cor:                formData.get("cor") || undefined,
+    combustivel:        formData.get("combustivel") || undefined,
+    cambio:             formData.get("cambio") || undefined,
+    kmAtual:            formData.get("kmAtual") || undefined,
+    categoria:          formData.get("categoria") || undefined,
+    placa:              formData.get("placa") || undefined,
+    renavam:            formData.get("renavam") || undefined,
+    chassi:             formData.get("chassi") || undefined,
+    situacaoDocumental: formData.get("situacaoDocumental") || undefined,
+    origem:             formData.get("origem") || "COMPRA",
+    fornecedorId:       formData.get("fornecedorId") || undefined,
+    precoCustoCentavos: parseCentavos(String(formData.get("precoCusto") ?? "0")),
+    precoVendaCentavos: parseCentavos(String(formData.get("precoVenda") ?? "0")),
+    observacoes:        formData.get("observacoes") || undefined,
+  };
+
+  const parsed = veiculoSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message ?? "Dados inválidos." };
+  }
+  const data = parsed.data;
+
+  await prisma.veiculo.update({
+    where: { id: veiculoId },
+    data: {
+      marca:              data.marca,
+      modelo:             data.modelo,
+      versao:             data.versao,
+      anoFabricacao:      data.anoFabricacao,
+      anoModelo:          data.anoModelo,
+      cor:                data.cor,
+      combustivel:        data.combustivel as any,
+      cambio:             data.cambio as any,
+      kmAtual:            data.kmAtual,
+      categoria:          data.categoria,
+      placa:              data.placa?.toUpperCase() || null,
+      renavam:            data.renavam || null,
+      chassi:             data.chassi?.toUpperCase() || null,
+      situacaoDocumental: data.situacaoDocumental,
+      origem:             data.origem as any,
+      fornecedorId:       data.fornecedorId || null,
+      precoCustoCentavos: data.precoCustoCentavos,
+      precoVendaCentavos: data.precoVendaCentavos,
+      observacoes:        data.observacoes,
+    },
+  });
+
+  revalidatePath(`/t/${tenantSlug}/veiculos`);
+  redirect(`/t/${tenantSlug}/veiculos`);
+}
+
 // ─── Atualizar status ─────────────────────────────────────────────────────────
 
 export async function atualizarStatusVeiculoAction(
