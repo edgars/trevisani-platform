@@ -76,9 +76,15 @@ export default async function ConfiguracoesPage({
                 <CardTitle>Perfil da loja</CardTitle>
               </div>
               <CardDescription>
-                Slug: <code className="rounded bg-muted px-1 text-xs">/t/{slug}</code>
-                {" · "}
-                O slug não pode ser alterado pelo tenant.
+                Vitrine:{" "}
+                <a
+                  href={`https://${slug}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "volante7.com.br"}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-primary underline-offset-2 hover:underline"
+                >
+                  {slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "volante7.com.br"}
+                </a>
               </CardDescription>
             </CardHeader>
             <Separator />

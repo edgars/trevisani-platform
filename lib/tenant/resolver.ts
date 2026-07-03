@@ -14,6 +14,8 @@ export const resolverTenantPorSlug = cache(async (slug: string) => {
       slug: true,
       nome: true,
       razaoSocial: true,
+      cnpj: true,
+      dominio: true,
       status: true,
       logoUrl: true,
       configJson: true,

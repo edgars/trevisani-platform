@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+const SLUGS_RESERVADOS = new Set([
+  "www", "app", "admin", "api", "mail", "smtp", "dashboard",
+  "login", "logout", "site", "demo", "suporte", "support",
+  "blog", "docs", "status", "static", "cdn", "assets",
+]);
+
 import { prisma } from "@/lib/db/client";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
@@ -64,11 +70,19 @@ const perfilSchema = z.object({
       "Domínio inválido (ex: minharevenda.com.br).",
     ),
   logoUrl: z.string().url("URL inválida.").optional().or(z.literal("")),
+  novoSlug: z
+    .string()
+    .min(3, "Slug deve ter ao menos 3 caracteres.")
+    .max(40, "Slug deve ter no máximo 40 caracteres.")
+    .regex(/^[a-z0-9-]+$/, "Slug deve conter apenas letras minúsculas, números e hifens.")
+    .refine((v) => !SLUGS_RESERVADOS.has(v), "Este slug é reservado e não pode ser usado.")
+    .optional()
+    .or(z.literal("")),
 });
 
 export type PerfilFormData = z.input<typeof perfilSchema>;
 export type PerfilActionResult =
-  | { ok: true; logoUrl?: string }
+  | { ok: true; logoUrl?: string; novoSlug?: string }
   | { ok: false; errors: Record<string, string[]> };
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -127,6 +141,7 @@ export async function atualizarPerfilTenantAction(
     email:      formData.get("email") ?? "",
     dominio:    formData.get("dominio") ?? "",
     logoUrl:    finalLogoUrl,
+    novoSlug:   ((formData.get("novoSlug") as string) ?? "").trim().toLowerCase() || "",
   };
 
   const parsed = perfilSchema.safeParse(raw);
@@ -134,7 +149,16 @@ export async function atualizarPerfilTenantAction(
     return { ok: false, errors: parsed.error.flatten().fieldErrors as Record<string, string[]> };
   }
 
-  const { nome, razaoSocial, cnpj, dominio } = parsed.data;
+  const { nome, razaoSocial, cnpj, dominio, novoSlug } = parsed.data;
+
+  // ── 3. Verificar unicidade do slug ────────────────────────────────────────
+  const slugFinal = novoSlug?.trim() || slug;
+  if (slugFinal !== slug) {
+    const existe = await prisma.tenant.findUnique({ where: { slug: slugFinal }, select: { id: true } });
+    if (existe && existe.id !== tenant.id) {
+      return { ok: false, errors: { novoSlug: ["Este slug já está em uso por outra loja."] } };
+    }
+  }
 
   const configAtual = (tenant.configJson as Record<string, unknown>) ?? {};
   const configJson = {
@@ -143,10 +167,11 @@ export async function atualizarPerfilTenantAction(
     emailContato: (raw.email as string).trim() || null,
   };
 
-  // ── 3. Persistir ─────────────────────────────────────────────────────────
+  // ── 4. Persistir ─────────────────────────────────────────────────────────
   await prisma.tenant.update({
     where: { id: tenant.id },
     data: {
+      slug:       slugFinal,
       nome:       nome.trim(),
       razaoSocial: razaoSocial?.trim() || null,
       cnpj:       cnpj || null,
@@ -158,6 +183,14 @@ export async function atualizarPerfilTenantAction(
 
   revalidatePath(`/t/${slug}`);
   revalidatePath(`/t/${slug}/configuracoes`);
+  if (slugFinal !== slug) {
+    revalidatePath(`/t/${slugFinal}`);
+    revalidatePath(`/t/${slugFinal}/configuracoes`);
+  }
 
-  return { ok: true, logoUrl: finalLogoUrl || undefined };
+  return {
+    ok: true,
+    logoUrl: finalLogoUrl || undefined,
+    novoSlug: slugFinal !== slug ? slugFinal : undefined,
+  };
 }

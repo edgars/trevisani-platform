@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2, Upload, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, ExternalLink, Loader2, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,28 +169,42 @@ interface PerfilFormProps {
 }
 
 export function PerfilForm({ slug, defaultValues }: PerfilFormProps) {
+  const router = useRouter();
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "volante7.com.br";
   const action = atualizarPerfilTenantAction.bind(null, slug);
   const [state, dispatch, pending] = useActionState<PerfilActionResult | null, FormData>(
     action,
     null,
   );
+  const [slugInput, setSlugInput] = useState(slug);
 
+  // Redirect to new slug URL if slug changed
   useEffect(() => {
+    if (state?.ok && state.novoSlug) {
+      router.replace(`/t/${state.novoSlug}/configuracoes`);
+    }
     if (state && !state.ok) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [state]);
+  }, [state, router]);
 
   const errors = state && !state.ok ? state.errors : undefined;
   const savedLogoUrl = state?.ok ? (state.logoUrl ?? defaultValues.logoUrl) : defaultValues.logoUrl;
+  const slugChanged = slugInput !== slug;
 
   return (
     <form action={dispatch} className="space-y-6">
       {/* Feedback de sucesso */}
-      {state?.ok && (
+      {state?.ok && !state.novoSlug && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-950/30 dark:text-green-400">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           Dados salvos com sucesso.
+        </div>
+      )}
+      {state?.ok && state.novoSlug && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-400">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Slug atualizado! Redirecionando para o novo endereço…
         </div>
       )}
 
@@ -205,6 +220,50 @@ export function PerfilForm({ slug, defaultValues }: PerfilFormProps) {
         savedUrl={savedLogoUrl}
         errors={errors}
       />
+
+      {/* ── Slug / Subdomínio ─────────────────────────────────────────── */}
+      <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Endereço da vitrine
+          </h3>
+          <a
+            href={`https://${slugInput}.${rootDomain}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Abrir vitrine
+          </a>
+        </div>
+
+        <div className="flex items-center gap-0 overflow-hidden rounded-lg border bg-background text-sm">
+          <span className="shrink-0 border-r bg-muted px-3 py-2 font-mono text-muted-foreground">
+            https://
+          </span>
+          <input
+            id="novoSlug"
+            name="novoSlug"
+            value={slugInput}
+            onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+            className="flex-1 bg-transparent px-3 py-2 font-mono outline-none placeholder:text-muted-foreground/50"
+            placeholder="minha-loja"
+            minLength={3}
+            maxLength={40}
+          />
+          <span className="shrink-0 border-l bg-muted px-3 py-2 font-mono text-muted-foreground">
+            .{rootDomain}
+          </span>
+        </div>
+
+        {slugChanged && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-400">
+            ⚠️ Alterar o slug mudará o endereço da vitrine e o link do painel. Todos os links antigos deixarão de funcionar.
+          </p>
+        )}
+        <FieldError errors={errors} name="novoSlug" />
+      </div>
 
       {/* ── Identificação ────────────────────────────────────────────── */}
       <div className="space-y-4">
