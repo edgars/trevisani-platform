@@ -1342,6 +1342,11 @@ model WebsiteConfig {
   whatsapp      String?
   endereco      String?
   instagram     String?
+  facebook      String?
+  youtube       String?
+  tiktok        String?
+  linkedin      String?
+  x             String?
   seoTitulo     String?
   seoDescricao  String?
   createdAt     DateTime     @default(now())

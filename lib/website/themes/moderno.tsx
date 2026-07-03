@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { WebsiteConfigData } from "@/lib/website/types";
+import { SocialLinksRow } from "@/lib/website/social-icons";
 
 interface ModernoLayoutProps {
   config: WebsiteConfigData;
@@ -84,6 +85,12 @@ export function ModernoLayout({
               {config.endereco && (
                 <p className="text-sm text-neutral-500 mt-1">{config.endereco}</p>
               )}
+              <SocialLinksRow
+                config={config}
+                className="flex items-center gap-4 mt-3 text-neutral-400"
+                iconClassName="h-5 w-5"
+                linkClassName="hover:text-white transition-colors"
+              />
             </div>
             <nav className="flex gap-6 text-sm text-neutral-400">
               <Link href="/" className="hover:text-white transition-colors">Início</Link>

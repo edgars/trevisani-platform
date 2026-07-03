@@ -27,6 +27,11 @@ interface WebsiteEditorProps {
     whatsapp: string | null;
     endereco: string | null;
     instagram: string | null;
+    facebook: string | null;
+    youtube: string | null;
+    tiktok: string | null;
+    linkedin: string | null;
+    x: string | null;
     seoTitulo: string | null;
     seoDescricao: string | null;
   } | null;
@@ -259,7 +264,7 @@ export function WebsiteEditor({ slug, tenantNome, config }: WebsiteEditorProps) 
 
       {/* ── Contato ──────────────────────────────────────────────────── */}
       <section>
-        <h2 className="text-lg font-semibold mb-4">Contato e redes sociais</h2>
+        <h2 className="text-lg font-semibold mb-4">Contato</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Telefone" name="telefone" defaultValue={c?.telefone ?? ""}
             placeholder="(11) 99999-0000" onChange={handleFieldChange} />
@@ -267,8 +272,28 @@ export function WebsiteEditor({ slug, tenantNome, config }: WebsiteEditorProps) 
             placeholder="5511999990000" onChange={handleFieldChange} />
           <Field label="Endereço" name="endereco" defaultValue={c?.endereco ?? ""}
             placeholder="Av. Paulista, 1000 – São Paulo, SP" className="sm:col-span-2" onChange={handleFieldChange} />
+        </div>
+      </section>
+
+      {/* ── Redes sociais ────────────────────────────────────────────── */}
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Redes sociais</h2>
+        <p className="text-sm text-muted-foreground -mt-3 mb-4">
+          Preencha apenas as redes que sua loja utiliza. O ícone só aparece na vitrine quando o link é informado.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Instagram (sem @)" name="instagram" defaultValue={c?.instagram ?? ""}
             placeholder="sualojasp" onChange={handleFieldChange} />
+          <Field label="Facebook" name="facebook" defaultValue={c?.facebook ?? ""}
+            placeholder="facebook.com/sualoja" onChange={handleFieldChange} />
+          <Field label="YouTube" name="youtube" defaultValue={c?.youtube ?? ""}
+            placeholder="youtube.com/@sualoja" onChange={handleFieldChange} />
+          <Field label="TikTok" name="tiktok" defaultValue={c?.tiktok ?? ""}
+            placeholder="tiktok.com/@sualoja" onChange={handleFieldChange} />
+          <Field label="LinkedIn" name="linkedin" defaultValue={c?.linkedin ?? ""}
+            placeholder="linkedin.com/company/sualoja" onChange={handleFieldChange} />
+          <Field label="X (Twitter)" name="x" defaultValue={c?.x ?? ""}
+            placeholder="x.com/sualoja" onChange={handleFieldChange} />
         </div>
       </section>
 

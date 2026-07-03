@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { WebsiteConfigData } from "@/lib/website/types";
+import { SocialLinksRow } from "@/lib/website/social-icons";
 
 interface MinimalLayoutProps {
   config: WebsiteConfigData;
@@ -60,8 +61,14 @@ export function MinimalLayout({
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-neutral-100 py-8">
-        <div className="container mx-auto px-4 text-center text-xs text-neutral-400 space-y-1">
+        <div className="container mx-auto px-4 text-center text-xs text-neutral-400 space-y-3">
           <p>{tenantNome}{config.endereco ? ` · ${config.endereco}` : ""}</p>
+          <SocialLinksRow
+            config={config}
+            className="flex items-center justify-center gap-4 text-neutral-500"
+            iconClassName="h-4 w-4"
+            linkClassName="hover:text-neutral-900 transition-colors"
+          />
           <p>
             Vitrine por{" "}
             <a href="https://volante7.com.br" target="_blank" rel="noopener noreferrer" className="hover:underline">

@@ -14,6 +14,11 @@ export interface WebsiteConfigData {
   whatsapp: string | null;
   endereco: string | null;
   instagram: string | null;
+  facebook: string | null;
+  youtube: string | null;
+  tiktok: string | null;
+  linkedin: string | null;
+  x: string | null;
   seoTitulo: string | null;
   seoDescricao: string | null;
   publicado: boolean;

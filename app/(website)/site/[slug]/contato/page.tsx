@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireWebsite } from "@/lib/tenant/resolver";
+import { getSocialLinks } from "@/lib/website/social-icons";
 import { ContatoForm } from "./contato-form";
 
 interface Params {
@@ -78,26 +79,27 @@ export default async function ContatoPage({ params }: Params) {
               </li>
             )}
 
-            {cfg.instagram && (
-              <li className="flex items-start gap-3">
+            {getSocialLinks(cfg).map(({ key, label, href, Icon }) => (
+              <li key={key} className="flex items-start gap-3">
                 <span
-                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs"
+                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white"
+                  style={{ backgroundColor: "hsl(var(--site-primary))" }}
                 >
-                  IG
+                  <Icon className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="font-medium">Instagram</p>
+                  <p className="font-medium">{label}</p>
                   <a
-                    href={`https://instagram.com/${cfg.instagram}`}
+                    href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:underline"
+                    className="text-muted-foreground hover:underline break-all"
                   >
-                    @{cfg.instagram}
+                    {href.replace(/^https?:\/\//, "")}
                   </a>
                 </div>
               </li>
-            )}
+            ))}
           </ul>
         </div>
 

@@ -235,6 +235,8 @@ async function main() {
       whatsapp: "5511999990000",
       endereco: "Av. Paulista, 1000 – São Paulo, SP",
       instagram: "lojademo",
+      facebook: "facebook.com/lojademo",
+      youtube: "youtube.com/@lojademo",
       seoTitulo: "Loja Demo – Compra e Venda de Veículos",
       seoDescricao: "Encontre os melhores veículos na Loja Demo. Estoque sempre renovado, financiamento facilitado e atendimento personalizado.",
     },

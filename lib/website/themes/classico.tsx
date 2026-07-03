@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { WebsiteConfigData } from "@/lib/website/types";
+import { SocialLinksRow } from "@/lib/website/social-icons";
 
 interface ClassicoLayoutProps {
   config: WebsiteConfigData;
@@ -112,19 +113,8 @@ export function ClassicoLayout({
               <ul className="space-y-1 text-sm opacity-80">
                 {config.telefone && <li>{config.telefone}</li>}
                 {config.endereco && <li>{config.endereco}</li>}
-                {config.instagram && (
-                  <li>
-                    <a
-                      href={`https://instagram.com/${config.instagram}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:opacity-100 underline underline-offset-2"
-                    >
-                      @{config.instagram}
-                    </a>
-                  </li>
-                )}
               </ul>
+              <SocialLinksRow config={config} className="flex items-center gap-4 mt-3" iconClassName="h-5 w-5" />
             </div>
 
             <div>
