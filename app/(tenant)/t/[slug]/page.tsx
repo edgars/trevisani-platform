@@ -1,7 +1,6 @@
 import {
   Car,
   DollarSign,
-  Package,
   ShoppingCart,
   Truck,
   Wallet,
@@ -23,13 +22,10 @@ export default async function TenantDashboardPage({
   const { slug } = await params;
   const tenant = await requireTenantPorSlug(slug);
 
-  const [veiculosDisponiveis, veiculosVendidos, ofertasEmAnalise, comprasAbertas, vendasAbertas, somaEstoque] =
+  const [veiculosDisponiveis, veiculosVendidos, comprasAbertas, vendasAbertas, somaEstoque] =
     await prisma.$transaction([
       prisma.veiculo.count({ where: { tenantId: tenant.id, status: "DISPONIVEL" } }),
       prisma.veiculo.count({ where: { tenantId: tenant.id, status: "VENDIDO" } }),
-      prisma.ofertaVeiculo.count({
-        where: { tenantId: tenant.id, status: { in: ["ENVIADA", "EM_ANALISE"] } },
-      }),
       prisma.compra.count({
         where: { tenantId: tenant.id, status: { in: ["RASCUNHO", "AGUARDANDO_ASSINATURA"] } },
       }),
@@ -49,10 +45,9 @@ export default async function TenantDashboardPage({
         <p className="text-sm text-muted-foreground">Visão consolidada da sua operação.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Veículos disponíveis" value={veiculosDisponiveis} icon={Car} />
         <StatCard label="Veículos vendidos" value={veiculosVendidos} icon={Truck} />
-        <StatCard label="Ofertas em análise" value={ofertasEmAnalise} icon={Package} />
         <StatCard
           label="Capital em estoque"
           value={formatCentavos(somaEstoque._sum.precoCustoCentavos ?? 0)}
@@ -96,7 +91,7 @@ export default async function TenantDashboardPage({
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
             A Fase 0 está pronta: você pode navegar por todos os módulos deste tenant.
-            As telas de negócio (estoque, ofertas, compras, vendas, financeiro,
+            As telas de negócio (estoque, compras, vendas, financeiro,
             documentos) serão implementadas na <strong>Fase 1</strong> do roadmap.
           </p>
           <p>

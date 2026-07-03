@@ -1,7 +1,8 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-export const FOTOS_BUCKET = "veiculos-fotos";
-export const DOCS_BUCKET  = "veiculos-docs";
+export const FOTOS_BUCKET  = "veiculos-fotos";
+export const DOCS_BUCKET   = "veiculos-docs";
+export const GERAIS_BUCKET = "arquivos-gerais";
 
 let _client: SupabaseClient | null = null;
 
@@ -75,4 +76,48 @@ export async function uploadFoto(
 
 export async function deleteFoto(storagePath: string): Promise<void> {
   return deletarArquivo(FOTOS_BUCKET, storagePath);
+}
+
+export async function uploadFotoChecklist(
+  veiculoId: string,
+  checklistId: string,
+  itemId: string,
+  buffer: Buffer,
+  contentType: string,
+  ext: string,
+): Promise<string> {
+  const path = `checklists/${veiculoId}/${checklistId}/${itemId}/${Date.now()}.${ext}`;
+  return uploadArquivo(GERAIS_BUCKET, path, buffer, contentType);
+}
+
+// ─── Logo do tenant ───────────────────────────────────────────────────────────
+
+/**
+ * Faz upload da logo do tenant para o bucket "arquivos-gerais".
+ * Usa upsert para sobrescrever automaticamente a logo anterior.
+ * Path: logos/{tenantId}/logo.{ext}
+ */
+export async function uploadLogoTenant(
+  tenantId: string,
+  buffer: Buffer,
+  contentType: string,
+  ext: string,
+): Promise<string> {
+  const client = getClient();
+
+  // Cria o bucket se ainda não existir (idempotente).
+  await client.storage.createBucket(GERAIS_BUCKET, {
+    public: true,
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/svg+xml", "image/gif"],
+    fileSizeLimit: 2 * 1024 * 1024, // 2 MB
+  }).catch(() => {}); // ignora se já existir
+
+  const storagePath = `logos/${tenantId}/logo.${ext}`;
+
+  const { error } = await client.storage
+    .from(GERAIS_BUCKET)
+    .upload(storagePath, buffer, { contentType, upsert: true });
+
+  if (error) throw new Error(`Upload logo: ${error.message}`);
+  return storagePath;
 }

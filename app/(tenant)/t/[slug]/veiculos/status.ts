@@ -5,8 +5,8 @@
 
 export const STAGE_ORDER = [
   "NEGOCIANDO",
-  "DISPONIVEL",
   "EM_PREPARACAO",
+  "DISPONIVEL",
   "RESERVADO",
   "VENDIDO",
   "BAIXADO",
@@ -48,4 +48,6 @@ export interface VeiculoResumo {
   thumbUrl: string | null;
   fotosCount: number;
   documentosCount: number;
+  /** ISO string — quando o veículo ficou disponível para venda */
+  dataChegada: string | null;
 }

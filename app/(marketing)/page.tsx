@@ -17,6 +17,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+// ─── Layout util ─────────────────────────────────────────────────────────────
+
+function Wrap({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`mx-auto w-full max-w-6xl px-6 md:px-12 lg:px-20 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 // ─── Dados ───────────────────────────────────────────────────────────────────
 
 const FUNCIONALIDADES = [
@@ -118,7 +128,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(225,29,72,0.15),transparent_55%)]" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(15,23,42,0.8),transparent_60%)]" />
 
-        <div className="container relative py-24 md:py-36">
+        <Wrap className="relative py-24 md:py-36">
           <div className="mx-auto max-w-3xl text-center">
             <Badge
               variant="secondary"
@@ -149,7 +159,7 @@ export default function HomePage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
                 asChild
               >
                 <Link href="/t/demo">Ver demonstração</Link>
@@ -196,86 +206,88 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </Wrap>
       </section>
 
       {/* ── Stats ───────────────────────────────────────────────────── */}
       <section className="border-y bg-muted/40">
-        <div className="container grid grid-cols-2 gap-8 py-10 text-center md:grid-cols-4">
+        <Wrap className="grid grid-cols-2 gap-8 py-10 text-center md:grid-cols-4">
           {STATS.map((s) => (
             <div key={s.k}>
               <div className="text-xl font-semibold">{s.k}</div>
               <div className="mt-1 text-sm text-muted-foreground">{s.v}</div>
             </div>
           ))}
-        </div>
+        </Wrap>
       </section>
 
       {/* ── Funcionalidades ─────────────────────────────────────────── */}
-      <section id="funcionalidades" className="container py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <Badge variant="secondary" className="mb-4">Funcionalidades</Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Um sistema completo para o ciclo do veículo
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Do cadastro pela placa até o DRE por veículo vendido — sem planilhas,
-            sem papelada, sem perder negócio.
-          </p>
-        </div>
+      <section id="funcionalidades">
+        <Wrap className="py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <Badge variant="secondary" className="mb-4">Funcionalidades</Badge>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              Um sistema completo para o ciclo do veículo
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Do cadastro pela placa até o DRE por veículo vendido — sem planilhas,
+              sem papelada, sem perder negócio.
+            </p>
+          </div>
 
-        <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {/* Card destaque (busca de placa) — ocupa 2 colunas */}
-          <Card className="lg:col-span-2 border-red-200 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-background dark:border-red-900/40">
-            <CardHeader>
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-red-600 text-white">
-                <Search className="h-5 w-5" />
-              </div>
-              <Badge variant="secondary" className="w-fit text-xs">Automação</Badge>
-              <CardTitle className="text-xl mt-2">Busca de placa inteligente</CardTitle>
-            </CardHeader>
-            <CardContent className="text-muted-foreground">
-              <p>
-                Digite a placa e o sistema preenche automaticamente marca, modelo, ano,
-                cor, chassi e situação documental via DETRAN. A tabela FIPE já vem
-                como sugestão de preço de venda. Cache de 2 meses — consultas
-                subsequentes são instantâneas.
-              </p>
-              <ul className="mt-4 space-y-1.5 text-sm">
-                {[
-                  "Dados do DETRAN em menos de 2 segundos",
-                  "Valor FIPE sugerido automaticamente",
-                  "Restrições de roubo, leilão e sinistro",
-                  "Cache compartilhado entre lojas da plataforma",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-red-600 shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Demais cards */}
-          {FUNCIONALIDADES.slice(1).map(({ icon: Icon, badge, title, body }) => (
-            <Card key={title} className="hover:border-primary/40 transition-colors">
+          <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Card destaque (busca de placa) — ocupa 2 colunas */}
+            <Card className="lg:col-span-2 border-red-200 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-background dark:border-red-900/40">
               <CardHeader>
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-red-600 text-white">
+                  <Search className="h-5 w-5" />
                 </div>
-                <Badge variant="secondary" className="w-fit text-xs">{badge}</Badge>
-                <CardTitle className="mt-2 text-base">{title}</CardTitle>
+                <Badge variant="secondary" className="w-fit text-xs">Automação</Badge>
+                <CardTitle className="text-xl mt-2">Busca de placa inteligente</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">{body}</CardContent>
+              <CardContent className="text-muted-foreground">
+                <p>
+                  Digite a placa e o sistema preenche automaticamente marca, modelo, ano,
+                  cor, chassi e situação documental via DETRAN. A tabela FIPE já vem
+                  como sugestão de preço de venda. Cache de 2 meses — consultas
+                  subsequentes são instantâneas.
+                </p>
+                <ul className="mt-4 space-y-1.5 text-sm">
+                  {[
+                    "Dados do DETRAN em menos de 2 segundos",
+                    "Valor FIPE sugerido automaticamente",
+                    "Restrições de roubo, leilão e sinistro",
+                    "Cache compartilhado entre lojas da plataforma",
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-red-600 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
             </Card>
-          ))}
-        </div>
+
+            {/* Demais cards */}
+            {FUNCIONALIDADES.slice(1).map(({ icon: Icon, badge, title, body }) => (
+              <Card key={title} className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <Badge variant="secondary" className="w-fit text-xs">{badge}</Badge>
+                  <CardTitle className="mt-2 text-base">{title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">{body}</CardContent>
+              </Card>
+            ))}
+          </div>
+        </Wrap>
       </section>
 
       {/* ── Como funciona ───────────────────────────────────────────── */}
       <section id="como-funciona" className="border-t bg-muted/30">
-        <div className="container py-24">
+        <Wrap className="py-24">
           <div className="mx-auto max-w-2xl text-center">
             <Badge variant="secondary" className="mb-4">Como funciona</Badge>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
@@ -292,81 +304,83 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        </div>
+        </Wrap>
       </section>
 
       {/* ── Vitrine online ──────────────────────────────────────────── */}
-      <section className="container py-24">
-        <div className="grid gap-12 md:grid-cols-2 md:items-center">
-          <div>
-            <Badge variant="secondary" className="mb-4">Vitrine online</Badge>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Seu site de loja incluso no plano
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Cada loja cadastrada na plataforma ganha automaticamente um site
-              público em <strong>sualooja.volante7.com.br</strong>. Personalize
-              tema, cores, fontes e logo. Publique ou despublique com um clique.
-            </p>
-            <ul className="mt-6 space-y-2.5 text-sm">
-              {[
-                "3 temas visuais prontos: Clássico, Moderno e Minimal",
-                "Estoque sincronizado em tempo real",
-                "Formulário de contato com captação de leads",
-                "Botão de WhatsApp em cada veículo",
-                "SEO configurável por loja",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Preview da vitrine */}
-          <div className="rounded-2xl border bg-muted/30 overflow-hidden shadow-lg">
-            <div className="border-b bg-background px-4 py-2.5 flex items-center gap-2">
-              <div className="flex gap-1">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-                <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-              </div>
-              <span className="text-xs text-muted-foreground mx-auto">minharevenda.volante7.com.br</span>
+      <section>
+        <Wrap className="py-24">
+          <div className="grid gap-12 md:grid-cols-2 md:items-center">
+            <div>
+              <Badge variant="secondary" className="mb-4">Vitrine online</Badge>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Seu site de loja incluso no plano
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                Cada loja cadastrada na plataforma ganha automaticamente um site
+                público em <strong>sualooja.volante7.com.br</strong>. Personalize
+                tema, cores, fontes e logo. Publique ou despublique com um clique.
+              </p>
+              <ul className="mt-6 space-y-2.5 text-sm">
+                {[
+                  "3 temas visuais prontos: Clássico, Moderno e Minimal",
+                  "Estoque sincronizado em tempo real",
+                  "Formulário de contato com captação de leads",
+                  "Botão de WhatsApp em cada veículo",
+                  "SEO configurável por loja",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="bg-slate-900 p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-4 w-24 rounded bg-white/20" />
-                <div className="flex gap-2">
-                  <div className="h-3 w-12 rounded bg-white/10" />
-                  <div className="h-3 w-12 rounded bg-white/10" />
-                  <div className="h-6 w-16 rounded bg-red-600/80" />
+
+            {/* Preview da vitrine */}
+            <div className="rounded-2xl border bg-muted/30 overflow-hidden shadow-lg">
+              <div className="border-b bg-background px-4 py-2.5 flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                </div>
+                <span className="text-xs text-muted-foreground mx-auto">minharevenda.volante7.com.br</span>
+              </div>
+              <div className="bg-slate-900 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-4 w-24 rounded bg-white/20" />
+                  <div className="flex gap-2">
+                    <div className="h-3 w-12 rounded bg-white/10" />
+                    <div className="h-3 w-12 rounded bg-white/10" />
+                    <div className="h-6 w-16 rounded bg-red-600/80" />
+                  </div>
+                </div>
+                <div className="rounded-lg bg-slate-800 p-6 mb-4 text-center">
+                  <div className="h-5 w-48 rounded bg-white/20 mx-auto mb-2" />
+                  <div className="h-3 w-32 rounded bg-white/10 mx-auto mb-4" />
+                  <div className="h-8 w-28 rounded-full bg-red-600/70 mx-auto" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="rounded-lg bg-slate-800 overflow-hidden">
+                      <div className="h-16 bg-slate-700" />
+                      <div className="p-2">
+                        <div className="h-2 w-3/4 rounded bg-white/20 mb-1" />
+                        <div className="h-2 w-1/2 rounded bg-red-600/50" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="rounded-lg bg-slate-800 p-6 mb-4 text-center">
-                <div className="h-5 w-48 rounded bg-white/20 mx-auto mb-2" />
-                <div className="h-3 w-32 rounded bg-white/10 mx-auto mb-4" />
-                <div className="h-8 w-28 rounded-full bg-red-600/70 mx-auto" />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="rounded-lg bg-slate-800 overflow-hidden">
-                    <div className="h-16 bg-slate-700" />
-                    <div className="p-2">
-                      <div className="h-2 w-3/4 rounded bg-white/20 mb-1" />
-                      <div className="h-2 w-1/2 rounded bg-red-600/50" />
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
-        </div>
+        </Wrap>
       </section>
 
       {/* ── Segurança ───────────────────────────────────────────────── */}
       <section className="border-t bg-muted/30">
-        <div className="container grid gap-10 py-20 md:grid-cols-2 md:items-center">
+        <Wrap className="grid gap-10 py-20 md:grid-cols-2 md:items-center">
           <div>
             <Badge variant="secondary" className="mb-4">Segurança</Badge>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
@@ -424,13 +438,13 @@ export default function HomePage() {
               ))}
             </CardContent>
           </Card>
-        </div>
+        </Wrap>
       </section>
 
       {/* ── CTA final ───────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#0a0e1a]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(225,29,72,0.12),transparent_60%)]" />
-        <div className="container relative py-28 text-center">
+        <Wrap className="relative py-28 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-text.svg"
@@ -454,13 +468,13 @@ export default function HomePage() {
             <Button
               size="lg"
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+              className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
               asChild
             >
               <Link href="/t/demo">Ver demo →</Link>
             </Button>
           </div>
-        </div>
+        </Wrap>
       </section>
     </div>
   );

@@ -40,13 +40,11 @@ export default async function TenantLayout({
   const NAV: NavItem[] = [
     { href: `/t/${slug}`, label: "Dashboard", icon: "layoutdashboard", group: "Visão geral" },
     { href: `/t/${slug}/veiculos`, label: "Veículos", icon: "car", group: "Catálogo" },
-    { href: `/t/${slug}/ofertas`, label: "Ofertas", icon: "package", group: "Catálogo" },
     { href: `/t/${slug}/fornecedores`, label: "Fornecedores", icon: "users", group: "Catálogo" },
     { href: `/t/${slug}/compras`, label: "Compras", icon: "shoppingcart", group: "Vendas" },
     { href: `/t/${slug}/vendas`, label: "Vendas", icon: "truck", group: "Vendas" },
     { href: `/t/${slug}/clientes`, label: "Clientes", icon: "users", group: "Vendas" },
     { href: `/t/${slug}/financeiro`, label: "Financeiro", icon: "wallet", group: "Financeiro" },
-    { href: `/t/${slug}/despesas`, label: "Despesas", icon: "receipt", group: "Financeiro" },
     { href: `/t/${slug}/documentos`, label: "Documentos", icon: "filesignature", group: "Gestão" },
     { href: `/t/${slug}/relatorios`, label: "Relatórios", icon: "barchart3", group: "Gestão" },
     { href: `/t/${slug}/website`, label: "Website", icon: "globe", group: "Gestão" },

@@ -7,6 +7,12 @@ import { Car, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn, formatCentavos } from "@/lib/utils";
+
+function diasNoEstoque(dataChegada: string | null): number | null {
+  if (!dataChegada) return null;
+  const diff = Date.now() - new Date(dataChegada).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
 import { atualizarStatusVeiculoAction } from "./actions";
 import {
   STAGE_CONFIG,
@@ -149,11 +155,34 @@ export function VeiculosKanban({
                     </div>
                     <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
-                  {v.placa && (
-                    <p className="mt-2 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                      {v.placa}
-                    </p>
-                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {v.placa && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {v.placa}
+                      </span>
+                    )}
+                    {(() => {
+                      const dias = diasNoEstoque(v.dataChegada);
+                      if (dias === null) return null;
+                      const cor =
+                        dias <= 30
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                          : dias <= 60
+                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                            : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400";
+                      return (
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                            cor,
+                          )}
+                          title="Dias no estoque desde que ficou disponível"
+                        >
+                          {dias}d estoque
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
               ))}
             </div>

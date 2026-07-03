@@ -92,16 +92,16 @@ export function SidebarNav({
   const groups = groupNavItems(items);
 
   return (
-    <nav className={cn("flex flex-col gap-4 py-2 text-sm", collapsed ? "px-2" : "px-3")}>
+    <nav className={cn("flex flex-col gap-6 py-3 text-sm", collapsed ? "px-2" : "px-3")}>
       {groups.map((group, gi) => (
-        <div key={group.label ?? gi} className="grid gap-0.5">
+        <div key={group.label ?? gi} className="flex flex-col gap-0.5">
           {group.label && !collapsed && (
-            <p className="px-3 pb-1 pt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
               {group.label}
             </p>
           )}
           {group.label && collapsed && gi > 0 && (
-            <div className="mx-2 mb-1 border-t border-sidebar-border" />
+            <div className="mx-2 mb-2 border-t border-sidebar-border" />
           )}
           {group.items.map((item) => {
             const Icon = NAV_ICONS[item.icon];
@@ -114,15 +114,15 @@ export function SidebarNav({
                 href={item.href}
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg py-2 transition-colors",
+                  "flex items-center gap-3 rounded-lg py-2.5 transition-colors",
                   collapsed ? "justify-center px-0" : "px-3",
                   active
                     ? "bg-sidebar-active-bg text-sidebar-active-fg font-medium shadow-sm"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && item.label}
+                <Icon className="h-5 w-5 shrink-0" />
+                {!collapsed && <span className="text-[13px]">{item.label}</span>}
               </Link>
             );
           })}

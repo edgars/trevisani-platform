@@ -10,6 +10,7 @@ import {
   Search,
   AlertCircle,
   PencilLine,
+  ShieldAlert,
 } from "lucide-react";
 
 import { Button }   from "@/components/ui/button";
@@ -71,6 +72,20 @@ export interface VeiculoData {
   precoCustoCentavos: number;
   precoVendaCentavos: number;
   observacoes?: string | null;
+  // ─ Novos campos técnicos ────────────────────────────────────────────────
+  motor?: string | null;
+  portas?: number | null;
+  ufRegistro?: string | null;
+  tipoCrv?: string | null;
+  numeroCrv?: string | null;
+  chassiRemarcado?: boolean;
+  blindado?: boolean;
+  leilao?: boolean;
+  sinistro?: boolean;
+  manualProprietario?: boolean;
+  chaveReserva?: boolean;
+  proprietarioNome?: string | null;
+  proprietarioDoc?: string | null;
 }
 
 interface Props {
@@ -144,6 +159,25 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
   );
   const [observacoes, setObservacoes] = useState(veiculo?.observacoes ?? "");
 
+  // ─ Campos técnicos ────────────────────────────────────────────────────────
+  const [motor,       setMotor]       = useState(veiculo?.motor ?? "");
+  const [portas,      setPortas]      = useState(String(veiculo?.portas ?? ""));
+  const [ufRegistro,  setUfRegistro]  = useState(veiculo?.ufRegistro ?? "");
+  const [tipoCrv,     setTipoCrv]     = useState(veiculo?.tipoCrv ?? "");
+  const [numeroCrv,   setNumeroCrv]   = useState(veiculo?.numeroCrv ?? "");
+
+  // ─ Condições booleanas ────────────────────────────────────────────────────
+  const [chassiRemarcado,    setChassiRemarcado]    = useState(veiculo?.chassiRemarcado ?? false);
+  const [blindado,           setBlindado]           = useState(veiculo?.blindado ?? false);
+  const [leilao,             setLeilao]             = useState(veiculo?.leilao ?? false);
+  const [sinistro,           setSinistro]           = useState(veiculo?.sinistro ?? false);
+  const [manualProprietario, setManualProprietario] = useState(veiculo?.manualProprietario ?? false);
+  const [chaveReserva,       setChaveReserva]       = useState(veiculo?.chaveReserva ?? false);
+
+  // ─ Proprietário ──────────────────────────────────────────────────────────
+  const [proprietarioNome, setProprietarioNome] = useState(veiculo?.proprietarioNome ?? "");
+  const [proprietarioDoc,  setProprietarioDoc]  = useState(veiculo?.proprietarioDoc ?? "");
+
   // ─ Dados extras da API (para exibição informativa) ─
   const [dadosApi, setDadosApi] = useState<PlacaDados | null>(null);
 
@@ -183,6 +217,12 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
         setCombustivel(d.combustivel);
         setCambio(d.cambio);
         setSituacaoDocumental(d.situacaoDocumental);
+        // ─ Novos campos técnicos da API ─
+        if (d.motor)      setMotor(d.motor);
+        if (d.ufRegistro) setUfRegistro(d.ufRegistro);
+        if (d.leilao)     setLeilao(true);
+        if (d.sinistro)   setSinistro(true);
+        if (d.chassiRemarcado) setChassiRemarcado(true);
         // Sugerir preço de venda baseado na FIPE, se disponível
         if (d.fipeValorCentavos > 0 && !precoVenda) {
           setPrecoVenda(centavosParaBRL(d.fipeValorCentavos));
@@ -239,6 +279,20 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
     formData.set("precoCusto",       precoCusto);
     formData.set("precoVenda",       precoVenda);
     formData.set("observacoes",      observacoes);
+    // ─ Novos campos técnicos ─
+    formData.set("motor",            motor);
+    formData.set("portas",           portas);
+    formData.set("ufRegistro",       ufRegistro);
+    formData.set("tipoCrv",          tipoCrv);
+    formData.set("numeroCrv",        numeroCrv);
+    formData.set("chassiRemarcado",  String(chassiRemarcado));
+    formData.set("blindado",         String(blindado));
+    formData.set("leilao",           String(leilao));
+    formData.set("sinistro",         String(sinistro));
+    formData.set("manualProprietario", String(manualProprietario));
+    formData.set("chaveReserva",     String(chaveReserva));
+    formData.set("proprietarioNome", proprietarioNome);
+    formData.set("proprietarioDoc",  proprietarioDoc);
 
     startTransition(async () => {
       try {
@@ -647,7 +701,167 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
             </CardContent>
           </Card>
 
-          {/* ── 4. Operacional & Precificação ───────────────────────────── */}
+          {/* ── 4. Detalhes Técnicos ────────────────────────────────────── */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Detalhes técnicos</CardTitle></CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="motor">Motor</Label>
+                  {lookupStatus === "found" && motor && (
+                    <Badge variant="secondary" className="text-xs h-4 px-1">API</Badge>
+                  )}
+                </div>
+                <Input
+                  id="motor"
+                  name="motor"
+                  placeholder="Ex: 1.6, 2.0T, 3.0"
+                  value={motor}
+                  onChange={(e) => setMotor(e.target.value)}
+                  disabled={isFormDisabled}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Portas</Label>
+                <Select value={portas} onValueChange={setPortas} disabled={isFormDisabled}>
+                  <SelectTrigger><SelectValue placeholder="Nº de portas" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2 portas</SelectItem>
+                    <SelectItem value="3">3 portas</SelectItem>
+                    <SelectItem value="4">4 portas</SelectItem>
+                    <SelectItem value="5">5 portas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="ufRegistro">UF de registro</Label>
+                  {lookupStatus === "found" && ufRegistro && (
+                    <Badge variant="secondary" className="text-xs h-4 px-1">API</Badge>
+                  )}
+                </div>
+                <Input
+                  id="ufRegistro"
+                  name="ufRegistro"
+                  placeholder="Ex: SP"
+                  maxLength={2}
+                  className="uppercase"
+                  value={ufRegistro}
+                  onChange={(e) => setUfRegistro(e.target.value.toUpperCase())}
+                  disabled={isFormDisabled}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="tipoCrv">Tipo CRV</Label>
+                <Input
+                  id="tipoCrv"
+                  name="tipoCrv"
+                  placeholder="Ex: Definitivo, Baixa definitiva"
+                  value={tipoCrv}
+                  onChange={(e) => setTipoCrv(e.target.value)}
+                  disabled={isFormDisabled}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="numeroCrv">Número CRV</Label>
+                <Input
+                  id="numeroCrv"
+                  name="numeroCrv"
+                  placeholder="Ex: 00012345678"
+                  value={numeroCrv}
+                  onChange={(e) => setNumeroCrv(e.target.value.replace(/\D/g, ""))}
+                  disabled={isFormDisabled}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── 5. Situação do veículo ───────────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldAlert className="h-4 w-4" />
+                Situação do veículo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(lookupStatus === "found" && (leilao || sinistro || chassiRemarcado)) && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                  Atenção: a API identificou restrições para este veículo. Verifique os itens marcados abaixo.
+                </div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {(
+                  [
+                    { key: "leilao",             label: "Leilão",                set: setLeilao,             val: leilao,             api: lookupStatus === "found" },
+                    { key: "sinistro",            label: "Sinistro / Perda total",set: setSinistro,           val: sinistro,           api: lookupStatus === "found" },
+                    { key: "chassiRemarcado",     label: "Chassi remarcado",      set: setChassiRemarcado,    val: chassiRemarcado,    api: lookupStatus === "found" },
+                    { key: "blindado",            label: "Blindado",              set: setBlindado,           val: blindado,           api: false },
+                    { key: "manualProprietario",  label: "Manual do proprietário",set: setManualProprietario, val: manualProprietario, api: false },
+                    { key: "chaveReserva",        label: "Chave reserva",         set: setChaveReserva,       val: chaveReserva,       api: false },
+                  ] as const
+                ).map(({ key, label, set, val, api }) => (
+                  <label
+                    key={key}
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors
+                      ${val
+                        ? "border-primary/40 bg-primary/5 font-medium text-primary"
+                        : "border-border hover:bg-muted/50"
+                      }
+                      ${isFormDisabled ? "cursor-not-allowed opacity-60" : ""}
+                    `}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded accent-primary"
+                      checked={val}
+                      onChange={(e) => (set as (v: boolean) => void)(e.target.checked)}
+                      disabled={isFormDisabled}
+                    />
+                    <span className="flex-1">{label}</span>
+                    {api && val && (
+                      <Badge variant="secondary" className="text-xs h-4 px-1 shrink-0">API</Badge>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── 6. Proprietário anterior ─────────────────────────────────── */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Proprietário anterior (CRV)</CardTitle></CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="proprietarioNome">Nome</Label>
+                <Input
+                  id="proprietarioNome"
+                  name="proprietarioNome"
+                  placeholder="Nome conforme CRV"
+                  value={proprietarioNome}
+                  onChange={(e) => setProprietarioNome(e.target.value)}
+                  disabled={isFormDisabled}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="proprietarioDoc">CPF / CNPJ</Label>
+                <Input
+                  id="proprietarioDoc"
+                  name="proprietarioDoc"
+                  placeholder="000.000.000-00"
+                  value={proprietarioDoc}
+                  onChange={(e) => setProprietarioDoc(e.target.value)}
+                  disabled={isFormDisabled}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── 8. Operacional & Precificação ───────────────────────────── */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Operacional &amp; Precificação</CardTitle>

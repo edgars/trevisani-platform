@@ -49,6 +49,7 @@ export const authConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.tenantId = user.tenantId ?? null;
+        token.tenantSlug = user.tenantSlug ?? null;
         token.escopo = user.escopo;
         token.papeis = user.papeis ?? [];
         token.permissoes = user.permissoes ?? [];
@@ -59,6 +60,7 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.sub!;
         session.user.tenantId = (token.tenantId as string | null) ?? null;
+        session.user.tenantSlug = (token.tenantSlug as string | null) ?? null;
         session.user.escopo = token.escopo as EscopoUsuario;
         session.user.papeis = (token.papeis as string[]) ?? [];
         session.user.permissoes = (token.permissoes as string[]) ?? [];
@@ -75,6 +77,7 @@ export const authConfig = {
 declare module "next-auth" {
   interface User {
     tenantId?: string | null;
+    tenantSlug?: string | null;
     escopo?: EscopoUsuario;
     papeis?: string[];
     permissoes?: string[];
@@ -86,6 +89,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       tenantId: string | null;
+      tenantSlug: string | null;
       escopo: EscopoUsuario;
       papeis: string[];
       permissoes: string[];
@@ -96,6 +100,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     tenantId?: string | null;
+    tenantSlug?: string | null;
     escopo?: EscopoUsuario;
     papeis?: string[];
     permissoes?: string[];

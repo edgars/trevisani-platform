@@ -32,6 +32,20 @@ const veiculoSchema = z.object({
   precoCustoCentavos: z.coerce.number().int().min(0).default(0),
   precoVendaCentavos: z.coerce.number().int().min(0).default(0),
   observacoes: z.string().optional(),
+  // ─ Novos campos técnicos ──────────────────────────────────────────────────
+  motor: z.string().optional(),
+  portas: z.coerce.number().int().min(1).max(6).optional(),
+  ufRegistro: z.string().optional(),
+  tipoCrv: z.string().optional(),
+  numeroCrv: z.string().optional(),
+  chassiRemarcado: z.coerce.boolean().optional().default(false),
+  blindado: z.coerce.boolean().optional().default(false),
+  leilao: z.coerce.boolean().optional().default(false),
+  sinistro: z.coerce.boolean().optional().default(false),
+  manualProprietario: z.coerce.boolean().optional().default(false),
+  chaveReserva: z.coerce.boolean().optional().default(false),
+  proprietarioNome: z.string().optional(),
+  proprietarioDoc: z.string().optional(),
 });
 
 // ─── Criar ────────────────────────────────────────────────────────────────────
@@ -75,6 +89,19 @@ export async function criarVeiculoAction(
     precoCustoCentavos:   parseCentavos(String(formData.get("precoCusto") ?? "0")),
     precoVendaCentavos:   parseCentavos(String(formData.get("precoVenda") ?? "0")),
     observacoes:          formData.get("observacoes") || undefined,
+    motor:                formData.get("motor") || undefined,
+    portas:               formData.get("portas") || undefined,
+    ufRegistro:           formData.get("ufRegistro") || undefined,
+    tipoCrv:              formData.get("tipoCrv") || undefined,
+    numeroCrv:            formData.get("numeroCrv") || undefined,
+    chassiRemarcado:      formData.get("chassiRemarcado") === "true",
+    blindado:             formData.get("blindado") === "true",
+    leilao:               formData.get("leilao") === "true",
+    sinistro:             formData.get("sinistro") === "true",
+    manualProprietario:   formData.get("manualProprietario") === "true",
+    chaveReserva:         formData.get("chaveReserva") === "true",
+    proprietarioNome:     formData.get("proprietarioNome") || undefined,
+    proprietarioDoc:      formData.get("proprietarioDoc") || undefined,
   };
 
   const parsed = veiculoSchema.safeParse(raw);
@@ -108,6 +135,19 @@ export async function criarVeiculoAction(
       precoVendaCentavos: data.precoVendaCentavos,
       observacoes:        data.observacoes,
       status:             "EM_PREPARACAO",
+      motor:              data.motor,
+      portas:             data.portas,
+      ufRegistro:         data.ufRegistro,
+      tipoCrv:            data.tipoCrv,
+      numeroCrv:          data.numeroCrv,
+      chassiRemarcado:    data.chassiRemarcado ?? false,
+      blindado:           data.blindado ?? false,
+      leilao:             data.leilao ?? false,
+      sinistro:           data.sinistro ?? false,
+      manualProprietario: data.manualProprietario ?? false,
+      chaveReserva:       data.chaveReserva ?? false,
+      proprietarioNome:   data.proprietarioNome,
+      proprietarioDoc:    data.proprietarioDoc,
     },
   });
 
@@ -157,6 +197,19 @@ export async function atualizarVeiculoAction(
     precoCustoCentavos: parseCentavos(String(formData.get("precoCusto") ?? "0")),
     precoVendaCentavos: parseCentavos(String(formData.get("precoVenda") ?? "0")),
     observacoes:        formData.get("observacoes") || undefined,
+    motor:              formData.get("motor") || undefined,
+    portas:             formData.get("portas") || undefined,
+    ufRegistro:         formData.get("ufRegistro") || undefined,
+    tipoCrv:            formData.get("tipoCrv") || undefined,
+    numeroCrv:          formData.get("numeroCrv") || undefined,
+    chassiRemarcado:    formData.get("chassiRemarcado") === "true",
+    blindado:           formData.get("blindado") === "true",
+    leilao:             formData.get("leilao") === "true",
+    sinistro:           formData.get("sinistro") === "true",
+    manualProprietario: formData.get("manualProprietario") === "true",
+    chaveReserva:       formData.get("chaveReserva") === "true",
+    proprietarioNome:   formData.get("proprietarioNome") || undefined,
+    proprietarioDoc:    formData.get("proprietarioDoc") || undefined,
   };
 
   const parsed = veiculoSchema.safeParse(raw);
@@ -194,6 +247,19 @@ export async function atualizarVeiculoAction(
       precoCustoCentavos: data.precoCustoCentavos,
       precoVendaCentavos: data.precoVendaCentavos,
       observacoes:        data.observacoes,
+      motor:              data.motor,
+      portas:             data.portas,
+      ufRegistro:         data.ufRegistro,
+      tipoCrv:            data.tipoCrv,
+      numeroCrv:          data.numeroCrv,
+      chassiRemarcado:    data.chassiRemarcado ?? false,
+      blindado:           data.blindado ?? false,
+      leilao:             data.leilao ?? false,
+      sinistro:           data.sinistro ?? false,
+      manualProprietario: data.manualProprietario ?? false,
+      chaveReserva:       data.chaveReserva ?? false,
+      proprietarioNome:   data.proprietarioNome,
+      proprietarioDoc:    data.proprietarioDoc,
       ...(statusParsed?.success ? { status: statusParsed.data } : {}),
     },
   });
@@ -234,15 +300,49 @@ export async function atualizarStatusVeiculoAction(
   // findFirst garante que o veículo pertence ao tenant (IDOR protection)
   const veiculo = await prisma.veiculo.findFirst({
     where: { id: veiculoId, tenantId },
+    include: {
+      checklists: {
+        select: { id: true, status: true },
+      },
+    },
   });
   if (!veiculo) return { error: "Veículo não encontrado." };
 
+  const novoStatus = parsedStatus.data;
+
+  // ─ Regra: RESERVADO exige ao menos 1 checklist (pode ser pendente) ─
+  if (novoStatus === "RESERVADO" && veiculo.checklists.length === 0) {
+    return {
+      error:
+        "Não é possível reservar o veículo sem pelo menos 1 checklist de inspeção. Crie um checklist antes.",
+    };
+  }
+
+  // ─ Regra: VENDIDO exige ao menos 1 checklist CONCLUIDO ─
+  if (novoStatus === "VENDIDO") {
+    const temConcluido = veiculo.checklists.some((c) => c.status === "CONCLUIDO");
+    if (!temConcluido) {
+      return {
+        error:
+          "Não é possível marcar o veículo como vendido sem um checklist de inspeção concluído.",
+      };
+    }
+  }
+
+  const updateData: Record<string, unknown> = { status: novoStatus };
+
+  // ─ Auto-preenche dataChegada quando o veículo fica disponível ─
+  if (novoStatus === "DISPONIVEL" && !veiculo.dataChegada) {
+    updateData.dataChegada = new Date();
+  }
+
   await prisma.veiculo.update({
     where: { id: veiculoId },
-    data: { status: parsedStatus.data },
+    data: updateData,
   });
 
   revalidatePath(`/t/${tenantSlug}/veiculos`);
+  revalidatePath(`/t/${tenantSlug}/veiculos/${veiculoId}/editar`);
   return {};
 }
 

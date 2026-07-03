@@ -138,10 +138,7 @@ function parseFipe(fipeValor?: string): number {
 // ─── Restrições documentais ───────────────────────────────────────────────────
 
 function extrairSituacao(r: PlacaApiResponse): string {
-  // Campo raiz "situacao" é o mais legível
   if (r.situacao) return capitalizar(r.situacao);
-
-  // Fallback: agrupa restrições do extra
   if (r.extra) {
     const restricoes = [
       r.extra.restricao_1,
@@ -153,8 +150,36 @@ function extrairSituacao(r: PlacaApiResponse): string {
       .map(capitalizar);
     return restricoes.length > 0 ? restricoes.join(", ") : "Sem restrição";
   }
-
   return "";
+}
+
+// ─── Helpers de restrição booleana ───────────────────────────────────────────
+
+function textoRestricoes(r: PlacaApiResponse): string {
+  return [
+    r.extra?.restricao_1,
+    r.extra?.restricao_2,
+    r.extra?.restricao_3,
+    r.extra?.restricao_4,
+    r.situacao,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toUpperCase();
+}
+
+function temRestricao(r: PlacaApiResponse, pattern: RegExp): boolean {
+  return pattern.test(textoRestricoes(r));
+}
+
+// ─── Cilindrada normalizada (ex: "1598 CC" → "1.6") ─────────────────────────
+
+function normalizarMotor(cilindradas?: string): string {
+  if (!cilindradas) return "";
+  const cc = parseInt(cilindradas.replace(/\D/g, ""), 10);
+  if (!cc) return "";
+  // Arredonda para 1 casa decimal usando centenas: 1598 → 16 → 1.6
+  return (Math.round(cc / 100) / 10).toFixed(1);
 }
 
 // ─── Mapper principal ────────────────────────────────────────────────────────
@@ -196,7 +221,11 @@ export function mapearResposta(
     situacaoDocumental: extrairSituacao(r),
     municipio: capitalizar(r.municipio ?? r.extra?.municipio ?? ""),
     uf: r.uf ?? r.extra?.uf ?? r.extra?.uf_placa ?? "",
-    cilindrada: r.extra?.cilindradas ?? "",
+    motor: normalizarMotor(r.extra?.cilindradas),
+    ufRegistro: r.extra?.uf_placa ?? r.uf ?? r.extra?.uf ?? "",
+    leilao: temRestricao(r, /LEIL[ÃA]O/),
+    sinistro: temRestricao(r, /SINISTRO/),
+    chassiRemarcado: temRestricao(r, /REMARCAD|ADULTERADO/),
     fipeValorCentavos: parseFipe(melhorFipe?.texto_valor),
     fipeModelo: capitalizar(melhorFipe?.texto_modelo ?? ""),
     payloadRaw: r,

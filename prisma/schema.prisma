@@ -112,6 +112,12 @@ enum TipoMovimento {
   SAIDA
 }
 
+enum StatusMovimentacao {
+  PENDENTE    // a receber / a pagar
+  PAGO        // liquidado
+  CANCELADO
+}
+
 enum TipoDocumentoVeiculo {
   NOTA_FISCAL
   LAUDO_VISTORIA
@@ -125,6 +131,25 @@ enum StatusFotoVeiculo {
   BATIDO        // foto tirada no recebimento com danos
   EM_REPARO     // foto durante a preparação/reparo
   PRONTO_VENDA  // foto final para vitrine
+}
+
+enum CategoriaFotoVeiculo {
+  EXTERNA       // fotos externas do veículo (vitrine)
+  INTERNA       // fotos internas / condição na chegada (avarias)
+  MOTOR         // fotos do compartimento do motor
+  DOCUMENTACAO  // fotos de documentos (CRLV, NF, etc.)
+}
+
+enum StatusChecklist {
+  PENDENTE   // criado mas não totalmente preenchido
+  CONCLUIDO  // todos os itens avaliados e marcado como concluído
+}
+
+enum CategoriaItemChecklist {
+  LATARIA
+  MOTOR
+  PNEUS
+  ESTOFADO
 }
 
 enum FormaPagamento {
@@ -313,7 +338,9 @@ model Tenant {
   despesas             Despesa[]
   pagamentos           Pagamento[]
   categoriasFinanceira CategoriaFinanceira[]
-  modelosDocumento    ModeloDocumento[]
+  contasBancarias      ContaBancaria[]
+  movimentacoes        Movimentacao[]
+  modelosDocumento     ModeloDocumento[]
   documentos           Documento[]
   fluxosAssinatura     FluxoAssinatura[]
   integracoesConfig    IntegracaoConfig[]
@@ -490,12 +517,13 @@ model Fornecedor {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  usuario Usuario?
-  cnaes   FornecedorCnae[]
-  ofertas OfertaVeiculo[]
-  pacotes PacoteOferta[]
-  compras Compra[]
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuario       Usuario?
+  cnaes         FornecedorCnae[]
+  ofertas       OfertaVeiculo[]
+  pacotes       PacoteOferta[]
+  compras       Compra[]
+  movimentacoes Movimentacao[]
 
   @@unique([tenantId, documento])
   @@index([tenantId, nome])
@@ -517,27 +545,61 @@ model FornecedorCnae {
 }
 
 model ClienteFinal {
-  id           String     @id @default(cuid())
-  tenantId     String
-  tipoPessoa   TipoPessoa @default(PF)
-  nome         String
-  documento    String     // CPF ou CNPJ
-  email        String?
-  telefone     String?
-  endereco     String?
-  observacoes  String?
-  consenteLgpd Boolean    @default(false)
-  ativo        Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  tenantId        String
+  tipoPessoa      TipoPessoa @default(PF)
+  nome            String
+  // CPF (PF, 11 dígitos sem máscara) ou CNPJ (PJ, 14 dígitos)
+  documento       String
+  email           String?
+  // celular / WhatsApp (somente dígitos, ex: "11999990000")
+  telefone        String?
+  // Aniversário (apenas dia e mês, para ações de marketing — somente PF)
+  aniversarioDia  Int?
+  aniversarioMes  Int?
+  // Tags de perfil (ex: ["suv","caminhonete"]) para segmentação e filtros
+  tags            String[]
+  // Endereço estruturado (preenchido via ViaCEP ou CNPJ API)
+  cep             String?
+  logradouro      String?
+  numero          String?
+  complemento     String?
+  bairro          String?
+  cidade          String?
+  uf              String?
+  observacoes     String?    @db.Text
+  consenteLgpd    Boolean    @default(false)
+  ativo           Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  usuario Usuario?
-  vendas  Venda[]
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuario       Usuario?
+  vendas        Venda[]
+  documentos    DocumentoCliente[]
+  movimentacoes Movimentacao[]
 
   @@unique([tenantId, documento])
   @@index([tenantId, nome])
+  @@index([tenantId, ativo])
   @@map("cliente_final")
+}
+
+model DocumentoCliente {
+  id           String   @id @default(cuid())
+  clienteId    String
+  nome         String
+  url          String
+  storagePath  String
+  mimeType     String
+  tamanhoBytes Int      @default(0)
+  descricao    String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  cliente ClienteFinal @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+  @@map("documento_cliente")
 }
 
 // =========================================================================
@@ -567,15 +629,42 @@ model Veiculo {
   status              StatusVeiculo       @default(EM_PREPARACAO)
   fornecedorId        String?
   observacoes         String?
+
+  // ─ Detalhes técnicos ──────────────────────────────────────────────────────
+  motor               String?   // cilindrada normalizada (ex: "1.6", "2.0T")
+  portas              Int?      // número de portas
+  ufRegistro          String?   // UF de emplacamento (da API)
+
+  // ─ CRV / Documentação ────────────────────────────────────────────────────
+  tipoCrv             String?   // tipo do CRV (ex: "Definitivo")
+  numeroCrv           String?   // número do CRV
+
+  // ─ Condições / Flags ──────────────────────────────────────────────────────
+  chassiRemarcado     Boolean              @default(false)
+  blindado            Boolean              @default(false)
+  leilao              Boolean              @default(false)
+  sinistro            Boolean              @default(false)
+  manualProprietario  Boolean              @default(false)
+  chaveReserva        Boolean              @default(false)
+
+  // ─ Proprietário anterior ──────────────────────────────────────────────────
+  proprietarioNome    String?
+  proprietarioDoc     String?   // CPF/CNPJ do proprietário no CRV
+
+  // Data em que o veículo ficou disponível (auto-preenchida ao mover para DISPONIVEL)
+  dataChegada         DateTime?
+
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
-  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  fotos      FotoVeiculo[]
-  documentos DocumentoVeiculo[]
-  ofertas    OfertaVeiculo[]
-  itensCompra ItemCompra[]
-  itensVenda  ItemVenda[]
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fotos         FotoVeiculo[]
+  documentos    DocumentoVeiculo[]
+  ofertas       OfertaVeiculo[]
+  itensCompra   ItemCompra[]
+  itensVenda    ItemVenda[]
+  checklists    ChecklistVeiculo[]
+  movimentacoes Movimentacao[]
 
   @@unique([tenantId, chassi])
   @@unique([tenantId, placa])
@@ -590,10 +679,11 @@ model FotoVeiculo {
   url         String            // URL pública no Supabase Storage
   storagePath String            // path interno para exclusão no bucket
   legenda     String?
-  status      StatusFotoVeiculo @default(PRONTO_VENDA)
-  destaque    Boolean           @default(false)
-  ordem       Int               @default(0)
-  createdAt   DateTime          @default(now())
+  status      StatusFotoVeiculo    @default(PRONTO_VENDA)
+  categoria   CategoriaFotoVeiculo @default(EXTERNA)
+  destaque    Boolean              @default(false)
+  ordem       Int                  @default(0)
+  createdAt   DateTime             @default(now())
 
   veiculo Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
 
@@ -618,6 +708,53 @@ model DocumentoVeiculo {
 
   @@index([veiculoId])
   @@map("documento_veiculo")
+}
+
+// ─── Checklists de inspeção ───────────────────────────────────────────────────
+
+model ChecklistVeiculo {
+  id          String          @id @default(cuid())
+  veiculoId   String
+  titulo      String          // ex: "Inspeção #1"
+  status      StatusChecklist @default(PENDENTE)
+  observacoes String?         @db.Text
+  realizadoEm DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  veiculo Veiculo         @relation(fields: [veiculoId], references: [id], onDelete: Cascade)
+  itens   ItemChecklist[]
+
+  @@index([veiculoId])
+  @@map("checklist_veiculo")
+}
+
+model ItemChecklist {
+  id              String                 @id @default(cuid())
+  checklistId     String
+  categoria       CategoriaItemChecklist
+  // null = não avaliado, true = ok, false = com problema
+  ok              Boolean?
+  observacao      String?                @db.Text
+  dataVerificacao DateTime?
+
+  checklist ChecklistVeiculo    @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  fotos     FotoItemChecklist[]
+
+  @@index([checklistId])
+  @@map("item_checklist")
+}
+
+model FotoItemChecklist {
+  id          String   @id @default(cuid())
+  itemId      String
+  url         String
+  storagePath String
+  createdAt   DateTime @default(now())
+
+  item ItemChecklist @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("foto_item_checklist")
 }
 
 model OfertaVeiculo {
@@ -679,11 +816,12 @@ model Compra {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
-  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  fornecedor Fornecedor   @relation(fields: [fornecedorId], references: [id])
-  itens      ItemCompra[]
-  pagamentos Pagamento[]
-  documentos Documento[]
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fornecedor    Fornecedor     @relation(fields: [fornecedorId], references: [id])
+  itens         ItemCompra[]
+  pagamentos    Pagamento[]
+  documentos    Documento[]
+  movimentacoes Movimentacao[]
 
   @@unique([tenantId, numero])
   @@index([tenantId, status])
@@ -717,11 +855,12 @@ model Venda {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  cliente    ClienteFinal @relation(fields: [clienteId], references: [id])
-  itens      ItemVenda[]
-  pagamentos Pagamento[]
-  documentos Documento[]
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cliente       ClienteFinal   @relation(fields: [clienteId], references: [id])
+  itens         ItemVenda[]
+  pagamentos    Pagamento[]
+  documentos    Documento[]
+  movimentacoes Movimentacao[]
 
   @@unique([tenantId, numero])
   @@index([tenantId, status])
@@ -745,21 +884,118 @@ model ItemVenda {
 // FINANCEIRO
 // =========================================================================
 
+model ContaBancaria {
+  id          String   @id @default(cuid())
+  tenantId    String
+  nome        String   // apelido: "Conta Bradesco Principal"
+  banco       String   // nome do banco
+  codigoBanco String?  // código de compensação
+  agencia     String?
+  conta       String?
+  // corrente | poupanca | pagamento | caixa_interno
+  tipoConta   String   @default("corrente")
+  pix         String?  // chave PIX
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  movimentacoes Movimentacao[]
+
+  @@index([tenantId, ativo])
+  @@map("conta_bancaria")
+}
+
 model CategoriaFinanceira {
   id        String        @id @default(cuid())
   tenantId  String
   nome      String
   tipo      TipoMovimento
+  cor       String?       // hex color, ex: "#4ade80"
+  icone     String?       // lucide icon name
   ativo     Boolean       @default(true)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  despesas   Despesa[]
-  pagamentos Pagamento[]
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  itens         ItemCategoriaFinanceira[]
+  despesas      Despesa[]
+  pagamentos    Pagamento[]
+  movimentacoes Movimentacao[]
 
   @@unique([tenantId, nome])
   @@map("categoria_financeira")
+}
+
+model ItemCategoriaFinanceira {
+  id          String   @id @default(cuid())
+  categoriaId String
+  nome        String
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  movimentacoes Movimentacao[]
+
+  @@unique([categoriaId, nome])
+  @@map("item_categoria_financeira")
+}
+
+model Movimentacao {
+  id              String             @id @default(cuid())
+  tenantId        String
+  tipo            TipoMovimento      // ENTRADA / SAIDA
+  status          StatusMovimentacao @default(PENDENTE)
+  descricao       String
+  valorCentavos   Int                // sempre positivo
+  dataCompetencia DateTime           // data do fato gerador
+  dataVencimento  DateTime?          // prazo de pagamento/recebimento
+  dataPagamento   DateTime?          // quando foi efetivamente liquidado
+  formaPagamento  FormaPagamento?
+  categoriaId     String?
+  itemId          String?
+  contaBancariaId String?
+  // Vínculos opcionais a entidades
+  clienteId       String?
+  fornecedorId    String?
+  veiculoId       String?
+  compraId        String?
+  vendaId         String?
+  observacoes     String?            @db.Text
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categoria   CategoriaFinanceira?     @relation(fields: [categoriaId], references: [id])
+  item        ItemCategoriaFinanceira? @relation(fields: [itemId], references: [id])
+  conta       ContaBancaria?           @relation(fields: [contaBancariaId], references: [id])
+  cliente     ClienteFinal?            @relation(fields: [clienteId], references: [id])
+  fornecedor  Fornecedor?              @relation(fields: [fornecedorId], references: [id])
+  veiculo     Veiculo?                 @relation(fields: [veiculoId], references: [id])
+  compra      Compra?                  @relation(fields: [compraId], references: [id])
+  venda       Venda?                   @relation(fields: [vendaId], references: [id])
+  anexos      AnexoMovimentacao[]
+
+  @@index([tenantId, tipo, status])
+  @@index([tenantId, dataCompetencia])
+  @@index([tenantId, veiculoId])
+  @@map("movimentacao")
+}
+
+model AnexoMovimentacao {
+  id             String   @id @default(cuid())
+  movimentacaoId String
+  nome           String
+  url            String
+  storagePath    String
+  mimeType       String
+  tamanhoBytes   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  movimentacao Movimentacao @relation(fields: [movimentacaoId], references: [id], onDelete: Cascade)
+
+  @@index([movimentacaoId])
+  @@map("anexo_movimentacao")
 }
 
 model Despesa {

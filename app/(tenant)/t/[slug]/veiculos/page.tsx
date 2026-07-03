@@ -61,6 +61,7 @@ export default async function VeiculosPage({
       precoCustoCentavos: true,
       precoVendaCentavos: true,
       status: true,
+      dataChegada: true,
       // Miniatura: foto de destaque (fallback: primeira pela ordem)
       fotos: {
         orderBy: [{ destaque: "desc" }, { ordem: "asc" }],
@@ -87,6 +88,7 @@ export default async function VeiculosPage({
     thumbUrl: v.fotos[0]?.url ?? null,
     fotosCount: v._count.fotos,
     documentosCount: v._count.documentos,
+    dataChegada: v.dataChegada?.toISOString() ?? null,
   }));
 
   const contadores = veiculos.reduce<Record<string, number>>((acc, v) => {

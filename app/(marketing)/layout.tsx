@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+/** Wrapper estreito usado em todas as seções da landing */
+export function Wrap({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`mx-auto w-full max-w-6xl px-6 md:px-12 lg:px-20 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 export default function MarketingLayout({
   children,
 }: {
@@ -8,19 +17,20 @@ export default function MarketingLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
+      {/* ── Header ──────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
+        <Wrap className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-text.svg"
               alt="Volante7"
-              style={{ height: 32 }}
+              style={{ height: 30 }}
               className="dark:[filter:brightness(0)_invert(1)]"
             />
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
+          <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
             <Link href="/#funcionalidades" className="transition-colors hover:text-foreground">
               Funcionalidades
             </Link>
@@ -40,26 +50,28 @@ export default function MarketingLayout({
               <Link href="/planos">Começar grátis</Link>
             </Button>
           </div>
-        </div>
+        </Wrap>
       </header>
 
       <main className="flex-1">{children}</main>
 
+      {/* ── Footer ──────────────────────────────────────────────────── */}
       <footer className="border-t bg-muted/40">
-        <div className="container py-10">
-          <div className="grid gap-8 md:grid-cols-4">
+        <Wrap className="py-12">
+          <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-4">
             <div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo-text.svg"
                 alt="Volante7"
-                style={{ height: 28 }}
+                style={{ height: 26 }}
                 className="mb-3 dark:[filter:brightness(0)_invert(1)]"
               />
               <p className="text-sm text-muted-foreground">
-                Gestão completa para revendas e concessionárias de veículos.
+                Gestão completa para revendas e concessionárias.
               </p>
             </div>
+
             <div>
               <p className="mb-3 text-sm font-semibold">Produto</p>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -68,6 +80,7 @@ export default function MarketingLayout({
                 <li><Link href="/t/demo" className="hover:text-foreground transition-colors">Ver demonstração</Link></li>
               </ul>
             </div>
+
             <div>
               <p className="mb-3 text-sm font-semibold">Sistema</p>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -75,6 +88,7 @@ export default function MarketingLayout({
                 <li><Link href="/admin" className="hover:text-foreground transition-colors">Administração</Link></li>
               </ul>
             </div>
+
             <div>
               <p className="mb-3 text-sm font-semibold">Contato</p>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -83,10 +97,11 @@ export default function MarketingLayout({
               </ul>
             </div>
           </div>
-          <div className="mt-8 border-t pt-6 text-center text-xs text-muted-foreground">
+
+          <div className="mt-10 border-t pt-6 text-center text-xs text-muted-foreground">
             © {new Date().getFullYear()} Volante7. Todos os direitos reservados.
           </div>
-        </div>
+        </Wrap>
       </footer>
     </div>
   );

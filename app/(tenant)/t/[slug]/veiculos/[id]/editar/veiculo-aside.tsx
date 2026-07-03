@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  ClipboardList,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ChecklistSection, type ChecklistData } from "../checklists/checklist-section";
 
 const COLLAPSE_KEY = "veiculo:aside-collapsed";
 
@@ -34,6 +36,8 @@ export interface AsideDocumento {
   tamanhoBytes: number;
   tipo: string;
 }
+
+export type { ChecklistData };
 
 const TIPO_DOC_LABEL: Record<string, string> = {
   NOTA_FISCAL: "Nota fiscal",
@@ -56,11 +60,13 @@ export function VeiculoAside({
   veiculoId,
   fotos,
   documentos,
+  checklists,
 }: {
   slug: string;
   veiculoId: string;
   fotos: AsideFoto[];
   documentos: AsideDocumento[];
+  checklists: ChecklistData[];
 }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [abrindoDoc, setAbrindoDoc] = React.useState<string | null>(null);
@@ -112,6 +118,15 @@ export function VeiculoAside({
           <Link href={`/t/${slug}/veiculos/${veiculoId}/arquivos`}>
             <FolderOpen className="h-4 w-4 text-amber-500" />
           </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-xl"
+          title={`Checklists (${checklists.length})`}
+          onClick={toggleCollapsed}
+        >
+          <ClipboardList className="h-4 w-4 text-violet-500" />
         </Button>
       </aside>
     );
@@ -183,6 +198,13 @@ export function VeiculoAside({
           )}
         </div>
       </section>
+
+      {/* ── Check Lists ── */}
+      <ChecklistSection
+        slug={slug}
+        veiculoId={veiculoId}
+        checklists={checklists}
+      />
 
       {/* ── Documentos ── */}
       <section className="rounded-xl border bg-card shadow-card">

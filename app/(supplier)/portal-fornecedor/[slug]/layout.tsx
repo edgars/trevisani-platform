@@ -27,8 +27,6 @@ export default async function SupplierLayout({
 
   const NAV: NavItem[] = [
     { href: `/portal-fornecedor/${slug}`, label: "Visão geral", icon: "layoutdashboard" },
-    { href: `/portal-fornecedor/${slug}/ofertas/nova`, label: "Nova oferta", icon: "pluscircle" },
-    { href: `/portal-fornecedor/${slug}/ofertas`, label: "Minhas ofertas", icon: "package" },
   ];
 
   return (

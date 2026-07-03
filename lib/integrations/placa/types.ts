@@ -96,7 +96,16 @@ export interface PlacaDados {
   situacaoDocumental: string;
   municipio: string;
   uf: string;
-  cilindrada: string;
+  /** Cilindrada normalizada (ex: "1.6", "2.0") */
+  motor: string;
+  /** UF de emplacamento */
+  ufRegistro: string;
+  /** Veículo identificado como de leilão pelas restrições */
+  leilao: boolean;
+  /** Veículo com sinistro registrado */
+  sinistro: boolean;
+  /** Chassi remarcado ou adulterado */
+  chassiRemarcado: boolean;
   /** Valor FIPE sugerido em centavos (0 se não disponível) */
   fipeValorCentavos: number;
   fipeModelo: string;
