@@ -10,7 +10,7 @@ const NAV: NavItem[] = [
   { href: "/admin/planos",   label: "Planos",               icon: "creditcard",      group: "Plataforma" },
   { href: "/admin/eventos",  label: "Tipos de evento",      icon: "zap",             group: "Plataforma" },
   { href: "/admin/metricas",    label: "Métricas globais",  icon: "barchart3",       group: "Análise" },
-  { href: "/admin/financeiro",  label: "Faturamento",       icon: "trendingup",      group: "Análise" },
+  { href: "/admin/financeiro",  label: "Financeiro",        icon: "wallet",          group: "Análise" },
   { href: "/admin/impersonar",    label: "Impersonação auditada", icon: "shieldalert", group: "Suporte" },
   { href: "/admin/configuracoes", label: "Configurações",        icon: "settings",    group: "Suporte" },
 ];

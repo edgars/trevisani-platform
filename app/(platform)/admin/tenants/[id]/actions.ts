@@ -44,3 +44,14 @@ export async function alterarDescontoTenantAction(
   revalidatePath("/admin/metricas");
   return {};
 }
+
+export async function alterarFeatureTenantAction(
+  tenantId: string,
+  feature: "leilaoHabilitado",
+  valor: boolean,
+): Promise<{ error?: string }> {
+  await assertAdmin();
+  await prisma.tenant.update({ where: { id: tenantId }, data: { [feature]: valor } });
+  revalidatePath(`/admin/tenants/${tenantId}`);
+  return {};
+}

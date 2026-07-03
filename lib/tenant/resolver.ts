@@ -20,6 +20,7 @@ export const resolverTenantPorSlug = cache(async (slug: string) => {
       logoUrl: true,
       configJson: true,
       planoId: true,
+      leilaoHabilitado: true,
     },
   });
 });

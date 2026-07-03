@@ -23,6 +23,7 @@ import {
   Wallet,
   Zap,
   TrendingUp,
+  Gavel,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ export const NAV_ICONS = {
   wallet: Wallet,
   zap: Zap,
   trendingup: TrendingUp,
+  gavel: Gavel,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof NAV_ICONS;

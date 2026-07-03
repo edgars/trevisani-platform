@@ -1,3 +1,9 @@
 {
-  "alias": ["volante7.com.br", "*.volante7.com.br"]
+  "alias": ["volante7.com.br", "*.volante7.com.br"],
+  "crons": [
+    {
+      "path": "/api/leiloes/encerrar",
+      "schedule": "* * * * *"
+    }
+  ]
 }

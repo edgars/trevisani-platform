@@ -44,6 +44,9 @@ export default async function TenantLayout({
     { href: `/t/${slug}/compras`, label: "Compras", icon: "shoppingcart", group: "Vendas" },
     { href: `/t/${slug}/vendas`, label: "Vendas", icon: "truck", group: "Vendas" },
     { href: `/t/${slug}/clientes`, label: "Clientes", icon: "users", group: "Vendas" },
+    ...(tenant.leilaoHabilitado
+      ? [{ href: `/t/${slug}/leiloes`, label: "Leilões", icon: "gavel" as const, group: "Vendas" }]
+      : []),
     { href: `/t/${slug}/financeiro`, label: "Financeiro", icon: "wallet", group: "Financeiro" },
     { href: `/t/${slug}/documentos`, label: "Documentos", icon: "filesignature", group: "Gestão" },
     { href: `/t/${slug}/relatorios`, label: "Relatórios", icon: "barchart3", group: "Gestão" },

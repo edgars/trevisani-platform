@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { alterarStatusTenantAction, alterarPlanoTenantAction, alterarDescontoTenantAction } from "./actions";
+import { alterarStatusTenantAction, alterarPlanoTenantAction, alterarDescontoTenantAction, alterarFeatureTenantAction } from "./actions";
 
 const STATUS_OPTIONS = [
   { value: "TRIAL",     label: "Trial" },
@@ -23,13 +23,15 @@ interface Props {
   planos: Plano[];
   currentPlanoId: string | null;
   descontoPercent: number;
+  leilaoHabilitado: boolean;
 }
 
-export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlanoId, descontoPercent }: Props) {
+export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlanoId, descontoPercent, leilaoHabilitado }: Props) {
   const router = useRouter();
   const [status,   setStatus]   = React.useState(currentStatus);
   const [planoId,  setPlanoId]  = React.useState(currentPlanoId ?? "");
   const [desconto, setDesconto] = React.useState(String(descontoPercent));
+  const [leilao,   setLeilao]   = React.useState(leilaoHabilitado);
   const [isPending, startTransition] = React.useTransition();
 
   function saveStatus() {
@@ -132,6 +134,36 @@ export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlano
         {parseInt(desconto, 10) > 0 && parseInt(desconto, 10) < 100 && (
           <p className="text-[10px] text-muted-foreground">MRR efetivo reduzido em {desconto}%.</p>
         )}
+      </div>
+
+      {/* Feature flags */}
+      <div className="space-y-2 pt-1">
+        <p className="text-xs font-medium text-muted-foreground">Módulos opcionais</p>
+        <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 px-3 py-2.5">
+          <div>
+            <p className="text-xs font-medium">Leilão de veículos</p>
+            <p className="text-[10px] text-muted-foreground">Permite criar leilões públicos em tempo real</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={leilao}
+            onClick={() => {
+              const novo = !leilao;
+              setLeilao(novo);
+              startTransition(async () => {
+                const result = await alterarFeatureTenantAction(tenantId, "leilaoHabilitado", novo);
+                if (result.error) { toast.error(result.error); setLeilao(!novo); return; }
+                toast.success(novo ? "Módulo de leilão habilitado." : "Módulo de leilão desabilitado.");
+                router.refresh();
+              });
+            }}
+            disabled={isPending}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${leilao ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${leilao ? "translate-x-4" : "translate-x-1"}`} />
+          </button>
+        </label>
       </div>
     </div>
   );

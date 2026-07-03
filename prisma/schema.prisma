@@ -364,8 +364,9 @@ model Tenant {
   status          StatusTenant @default(TRIAL)
   configJson      Json?
   planoId         String?
-  storageUsadoBytes Int        @default(0)  // soma de todos os uploads em bytes
-  descontoPercent   Int        @default(0)  // 0-100, desconto concedido pelo super admin
+  storageUsadoBytes  Int        @default(0)  // soma de todos os uploads em bytes
+  descontoPercent    Int        @default(0)  // 0-100, desconto concedido pelo super admin
+  leilaoHabilitado   Boolean    @default(false) // feature flag: módulo de leilão
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -392,6 +393,7 @@ model Tenant {
   orcamentos           OrcamentoMensal[]
   documentos           Documento[]
   fluxosAssinatura     FluxoAssinatura[]
+  leiloes              Leilao[]
   integracoesConfig    IntegracaoConfig[]
   emailLogs            EmailLog[]
   mensagensWhatsapp    MensagemWhatsapp[]
@@ -639,11 +641,13 @@ model ClienteFinal {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   usuario       Usuario?
   vendas        Venda[]
   documentos    DocumentoCliente[]
   movimentacoes Movimentacao[]
+  lances        Lance[]
+  leioesVencidos Leilao[]         @relation("LeilaoVencedor")
 
   @@unique([tenantId, documento])
   @@index([tenantId, nome])
@@ -731,6 +735,7 @@ model Veiculo {
   itensVenda    ItemVenda[]
   checklists    ChecklistVeiculo[]
   movimentacoes Movimentacao[]
+  leiloes       Leilao[]
 
   @@unique([tenantId, chassi])
   @@unique([tenantId, placa])
@@ -1064,6 +1069,115 @@ model AnexoMovimentacao {
   @@map("anexo_movimentacao")
 }
 
+// ─── Financeiro da própria plataforma (não é escopado por tenant) ───────────
+// Espelha ContaBancaria/Movimentacao do tenant, mas para as finanças internas
+// da AutoGestão (contas da empresa, despesas operacionais, outras receitas).
+// Não entra nas políticas de RLS por tenantId (tabela sem tenantId).
+
+model ContaBancariaPlataforma {
+  id          String   @id @default(cuid())
+  nome        String   // apelido: "Conta PJ Principal"
+  banco       String
+  codigoBanco String?
+  agencia     String?
+  conta       String?
+  tipoConta   String   @default("corrente")
+  pix         String?
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movimentacoes MovimentacaoPlataforma[]
+  recorrencias  MovimentacaoRecorrentePlataforma[]
+
+  @@index([ativo])
+  @@map("conta_bancaria_plataforma")
+}
+
+enum TipoEmissorFinanceiro {
+  EMPRESA      // fornecedor / prestador de serviço PJ
+  FUNCIONARIO  // folha de pagamento / colaborador
+  SOCIO        // retirada de sócio (pró-labore / distribuição de lucros)
+}
+
+// Fornecedor, funcionário ou sócio associado a uma despesa/receita da plataforma.
+model EmissorFinanceiroPlataforma {
+  id          String                @id @default(cuid())
+  nome        String
+  tipo        TipoEmissorFinanceiro
+  documento   String?               // CPF ou CNPJ
+  contato     String?               // e-mail / telefone (texto livre)
+  observacoes String?               @db.Text
+  ativo       Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  movimentacoes MovimentacaoPlataforma[]
+  recorrencias  MovimentacaoRecorrentePlataforma[]
+
+  @@index([ativo, tipo])
+  @@map("emissor_financeiro_plataforma")
+}
+
+// Modelo (template) de despesa/receita recorrente mensal da plataforma.
+// A cada mês, uma MovimentacaoPlataforma concreta é gerada a partir daqui
+// (ver lib/financeiro-plataforma/recorrencias.ts) — o valor de cada mês
+// gerado pode ser editado individualmente sem afetar o template nem os
+// demais meses. Cancelar a recorrência (ativa = false) interrompe a
+// geração de novos meses, mas preserva o histórico já gerado.
+model MovimentacaoRecorrentePlataforma {
+  id                  String          @id @default(cuid())
+  tipo                TipoMovimento
+  descricao           String
+  categoria           String?
+  valorPadraoCentavos Int
+  diaVencimento       Int             @default(5) // dia do mês (1-28) em que a movimentação é gerada
+  formaPagamento      FormaPagamento?
+  contaBancariaId     String?
+  emissorId           String?
+  observacoes         String?         @db.Text
+  ativa               Boolean         @default(true)
+  dataInicio          DateTime        @default(now())
+  dataFim             DateTime?       // preenchido automaticamente ao cancelar a recorrência
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  conta         ContaBancariaPlataforma?     @relation(fields: [contaBancariaId], references: [id])
+  emissor       EmissorFinanceiroPlataforma? @relation(fields: [emissorId], references: [id])
+  movimentacoes MovimentacaoPlataforma[]
+
+  @@index([ativa])
+  @@map("movimentacao_recorrente_plataforma")
+}
+
+model MovimentacaoPlataforma {
+  id              String             @id @default(cuid())
+  tipo            TipoMovimento      // ENTRADA (crédito) / SAIDA (débito)
+  status          StatusMovimentacao @default(PENDENTE)
+  descricao       String
+  categoria       String?            // texto livre, ex: "Infraestrutura", "Assinaturas de tenants"
+  valorCentavos   Int                // sempre positivo
+  dataCompetencia DateTime
+  dataVencimento  DateTime?
+  dataPagamento   DateTime?
+  formaPagamento  FormaPagamento?
+  contaBancariaId String?
+  emissorId       String?
+  recorrenteId    String?            // preenchido quando gerada a partir de uma recorrência mensal
+  observacoes     String?            @db.Text
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  conta       ContaBancariaPlataforma?          @relation(fields: [contaBancariaId], references: [id])
+  emissor     EmissorFinanceiroPlataforma?      @relation(fields: [emissorId], references: [id])
+  recorrencia MovimentacaoRecorrentePlataforma? @relation(fields: [recorrenteId], references: [id])
+
+  @@index([tipo, status])
+  @@index([dataCompetencia])
+  @@index([recorrenteId])
+  @@map("movimentacao_plataforma")
+}
+
 // ─── Configuração fiscal por tenant ──────────────────────────────────────────
 
 model ConfiguracaoFiscal {
@@ -1379,4 +1493,52 @@ model AuditLog {
 
   @@index([tenantId, entidade, createdAt])
   @@map("audit_log")
+}
+
+// ─── Módulo de Leilão ─────────────────────────────────────────────────────────
+
+enum StatusLeilao {
+  AGENDADO
+  ATIVO
+  ENCERRADO
+  CANCELADO
+}
+
+model Leilao {
+  id              String       @id @default(cuid())
+  tenantId        String
+  veiculoId       String?
+  titulo          String
+  descricao       String?
+  precoInicial    Int          // centavos
+  precoAtual      Int          // centavos — atualizado a cada lance
+  incrementoMin   Int          @default(0)  // incremento mínimo por lance (centavos)
+  dataInicio      DateTime
+  dataFim         DateTime
+  status          StatusLeilao @default(AGENDADO)
+  vencedorId      String?      // clienteId do ganhador
+  valorFinal      Int?         // valor do lance vencedor (centavos)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  veiculo   Veiculo?       @relation(fields: [veiculoId], references: [id], onDelete: SetNull)
+  vencedor  ClienteFinal?  @relation(name: "LeilaoVencedor", fields: [vencedorId], references: [id], onDelete: SetNull)
+  lances    Lance[]
+
+  @@index([tenantId, status])
+  @@index([dataFim, status])
+}
+
+model Lance {
+  id            String   @id @default(cuid())
+  leilaoId      String
+  clienteId     String
+  valorCentavos Int
+  createdAt     DateTime @default(now())
+
+  leilao  Leilao       @relation(fields: [leilaoId], references: [id], onDelete: Cascade)
+  cliente ClienteFinal @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([leilaoId, createdAt])
 }
