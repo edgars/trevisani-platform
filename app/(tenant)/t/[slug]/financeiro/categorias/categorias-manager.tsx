@@ -209,7 +209,7 @@ export function CategoriasManager({ slug, categorias: initial }: { slug: string;
       {categorias.length === 0 && (
         <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
           <p>Nenhuma categoria cadastrada.</p>
-          <p className="mt-1">Crie sua primeira categoria ou use o botão <strong>"Usar padrões"</strong> para importar categorias típicas de concessionárias.</p>
+          <p className="mt-1">Crie sua primeira categoria ou use o botão <strong>&ldquo;Usar padrões&rdquo;</strong> para importar categorias típicas de concessionárias.</p>
         </div>
       )}
 
