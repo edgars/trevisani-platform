@@ -9,7 +9,7 @@ export interface EmailAttachment {
 }
 
 export interface EmailInput {
-  tenantId: string;
+  tenantId?: string;
   para: string | string[];
   assunto: string;
   html?: string;

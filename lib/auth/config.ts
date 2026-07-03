@@ -30,6 +30,8 @@ export const authConfig = {
         "/login",
         "/registrar",
         "/planos",
+        "/esqueci-senha",
+        "/redefinir-senha",
         "/api/public",
         "/api/health",
       ];

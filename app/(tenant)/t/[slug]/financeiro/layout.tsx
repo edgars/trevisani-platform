@@ -2,11 +2,13 @@ import Link from "next/link";
 import { type ReactNode } from "react";
 
 const tabs = [
-  { href: "", label: "Resumo" },
+  { href: "",               label: "Resumo" },
   { href: "/movimentacoes", label: "Movimentações" },
-  { href: "/dre", label: "DRE" },
-  { href: "/contas", label: "Contas Bancárias" },
-  { href: "/categorias", label: "Categorias" },
+  { href: "/orcamento",     label: "DRE Planejado" },
+  { href: "/dre",           label: "DRE Comparativo" },
+  { href: "/contas",        label: "Contas Bancárias" },
+  { href: "/categorias",    label: "Categorias" },
+  { href: "/configuracao",  label: "Config. Fiscal" },
 ];
 
 export default async function FinanceiroLayout({

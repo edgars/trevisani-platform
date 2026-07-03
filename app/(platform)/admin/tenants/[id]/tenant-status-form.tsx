@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { alterarStatusTenantAction, alterarPlanoTenantAction } from "./actions";
+import { alterarStatusTenantAction, alterarPlanoTenantAction, alterarDescontoTenantAction } from "./actions";
 
 const STATUS_OPTIONS = [
   { value: "TRIAL",     label: "Trial" },
@@ -22,12 +22,14 @@ interface Props {
   currentStatus: string;
   planos: Plano[];
   currentPlanoId: string | null;
+  descontoPercent: number;
 }
 
-export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlanoId }: Props) {
+export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlanoId, descontoPercent }: Props) {
   const router = useRouter();
-  const [status, setStatus]   = React.useState(currentStatus);
-  const [planoId, setPlanoId] = React.useState(currentPlanoId ?? "");
+  const [status,   setStatus]   = React.useState(currentStatus);
+  const [planoId,  setPlanoId]  = React.useState(currentPlanoId ?? "");
+  const [desconto, setDesconto] = React.useState(String(descontoPercent));
   const [isPending, startTransition] = React.useTransition();
 
   function saveStatus() {
@@ -45,6 +47,17 @@ export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlano
       const result = await alterarPlanoTenantAction(tenantId, planoId);
       if (result.error) { toast.error(result.error); return; }
       toast.success("Plano atualizado.");
+      router.refresh();
+    });
+  }
+
+  function saveDesconto() {
+    const pct = parseInt(desconto, 10);
+    if (isNaN(pct)) return;
+    startTransition(async () => {
+      const result = await alterarDescontoTenantAction(tenantId, pct);
+      if (result.error) { toast.error(result.error); return; }
+      toast.success("Desconto atualizado.");
       router.refresh();
     });
   }
@@ -90,6 +103,36 @@ export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlano
           </div>
         </div>
       )}
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">
+          Desconto na mensalidade (0–100%)
+        </label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="number" min={0} max={100}
+              value={desconto}
+              onChange={e => setDesconto(e.target.value)}
+              className="h-8 w-full rounded-md border bg-background px-3 pr-8 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+          </div>
+          <Button
+            size="sm" className="h-8 px-3 text-xs"
+            onClick={saveDesconto}
+            disabled={isPending || parseInt(desconto, 10) === descontoPercent}
+          >
+            {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Salvar"}
+          </Button>
+        </div>
+        {parseInt(desconto, 10) === 100 && (
+          <p className="text-[10px] text-amber-600">Desconto de 100% — tenant não será cobrado.</p>
+        )}
+        {parseInt(desconto, 10) > 0 && parseInt(desconto, 10) < 100 && (
+          <p className="text-[10px] text-muted-foreground">MRR efetivo reduzido em {desconto}%.</p>
+        )}
+      </div>
     </div>
   );
 }

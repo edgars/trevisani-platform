@@ -21,12 +21,15 @@ export default async function PlatformDashboardPage() {
         include: { plano: true },
       }),
       prisma.tenant.findMany({
-        where: { planoId: { not: null }, status: "ATIVO" },
-        include: { plano: { select: { precoMensalCentavos: true } } },
+        where:  { planoId: { not: null }, status: "ATIVO" },
+        select: { descontoPercent: true, plano: { select: { precoMensalCentavos: true } } },
       }),
     ]);
 
-  const mrr = tenantsComPlano.reduce((sum, t) => sum + (t.plano?.precoMensalCentavos ?? 0), 0);
+  const mrr = tenantsComPlano.reduce((sum, t) => {
+    const base = t.plano?.precoMensalCentavos ?? 0;
+    return sum + Math.round(base * (1 - (t.descontoPercent ?? 0) / 100));
+  }, 0);
 
   return (
     <div className="space-y-6">

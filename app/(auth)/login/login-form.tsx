@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { signIn, getSession } from "next-auth/react";
 import { AlertCircle, Lock, Mail } from "lucide-react";
 
@@ -269,7 +270,15 @@ export function LoginForm({ erro }: LoginFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="senha">Senha</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="senha">Senha</Label>
+            <Link
+              href="/esqueci-senha"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Esqueci minha senha
+            </Link>
+          </div>
           <div className="relative">
             <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -287,6 +296,16 @@ export function LoginForm({ erro }: LoginFormProps) {
         <Button type="submit" className="w-full" size="lg" disabled={loading}>
           Entrar
         </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Prefere código por e-mail?{" "}
+          <Link
+            href={`/login/otp${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
+            className="font-medium text-primary hover:underline"
+          >
+            Entrar com OTP
+          </Link>
+        </p>
       </form>
     </>
   );

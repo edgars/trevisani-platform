@@ -6,18 +6,18 @@ import { prisma } from "@/lib/db/client";
 import { requireScope } from "@/lib/auth/session";
 
 const planoSchema = z.object({
-  nome:                  z.string().min(2, "Nome obrigatório"),
-  slug:                  z.string().min(2).regex(/^[a-z0-9-]+$/, "Slug: minúsculas, números e hifens"),
-  descricao:             z.string().optional(),
-  precoMensalStr:        z.string().default("0"),
-  precoAnualStr:         z.string().default("0"),
-  limiteUsuarios:        z.coerce.number().int().default(5),
-  limiteVeiculos:        z.coerce.number().int().default(50),
-  limiteStorageMB:       z.coerce.number().int().default(1024),
-  limitePlacasMes:       z.coerce.number().int().default(100),
-  limiteCnpjsMes:        z.coerce.number().int().default(50),
-  limiteClientesMes:     z.coerce.number().int().default(200),
-  ativo:                 z.coerce.boolean().default(true),
+  nome:              z.string().min(2, "Nome obrigatório"),
+  slug:              z.string().min(2).regex(/^[a-z0-9-]+$/, "Slug: minúsculas, números e hifens"),
+  descricao:         z.string().optional(),
+  precoMensalStr:    z.string().default("0"),
+  precoAnualStr:     z.string().default("0"),
+  limiteUsuarios:    z.coerce.number().int().default(5),
+  limiteVeiculos:    z.coerce.number().int().default(50),
+  limiteStorageMB:   z.coerce.number().int().default(1024),
+  limitePlacasMes:   z.coerce.number().int().default(100),
+  limiteCnpjsMes:    z.coerce.number().int().default(50),
+  limiteClientesMes: z.coerce.number().int().default(200),
+  // Note: checkboxes are NOT submitted when unchecked — read separately from FormData
 });
 
 function parseCentavos(s: string): number {
@@ -37,14 +37,15 @@ export async function criarPlanoAction(
   if (!parsed.success) return { error: parsed.error.errors[0]?.message };
 
   const { precoMensalStr, precoAnualStr, ...rest } = parsed.data;
+  const ativo = formData.get("ativo") === "on";
 
   try {
     const plano = await prisma.plano.create({
       data: {
         ...rest,
+        ativo,
         precoMensalCentavos: parseCentavos(precoMensalStr),
         precoAnualCentavos:  parseCentavos(precoAnualStr),
-        ativo: rest.ativo ?? true,
       },
       select: { id: true },
     });
@@ -65,17 +66,23 @@ export async function atualizarPlanoAction(
   if (!parsed.success) return { error: parsed.error.errors[0]?.message };
 
   const { precoMensalStr, precoAnualStr, ...rest } = parsed.data;
+  const ativo = formData.get("ativo") === "on";
 
-  await prisma.plano.update({
-    where: { id },
-    data: {
-      ...rest,
-      precoMensalCentavos: parseCentavos(precoMensalStr),
-      precoAnualCentavos:  parseCentavos(precoAnualStr),
-    },
-  });
-  revalidatePath("/admin/planos");
-  return {};
+  try {
+    await prisma.plano.update({
+      where: { id },
+      data: {
+        ...rest,
+        ativo,
+        precoMensalCentavos: parseCentavos(precoMensalStr),
+        precoAnualCentavos:  parseCentavos(precoAnualStr),
+      },
+    });
+    revalidatePath("/admin/planos");
+    return {};
+  } catch {
+    return { error: "Já existe um plano com este nome ou slug." };
+  }
 }
 
 export async function excluirPlanoAction(id: string): Promise<{ error?: string }> {

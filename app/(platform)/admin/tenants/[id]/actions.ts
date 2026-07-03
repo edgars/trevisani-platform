@@ -31,3 +31,16 @@ export async function alterarPlanoTenantAction(
   revalidatePath("/admin/tenants");
   return {};
 }
+
+export async function alterarDescontoTenantAction(
+  tenantId: string,
+  desconto: number,
+): Promise<{ error?: string }> {
+  await assertAdmin();
+  if (desconto < 0 || desconto > 100) return { error: "Desconto deve ser entre 0 e 100%." };
+  await prisma.tenant.update({ where: { id: tenantId }, data: { descontoPercent: desconto } });
+  revalidatePath(`/admin/tenants/${tenantId}`);
+  revalidatePath("/admin/tenants");
+  revalidatePath("/admin/metricas");
+  return {};
+}

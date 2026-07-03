@@ -54,7 +54,7 @@ export default async function MetricasPage() {
     }),
     prisma.tenant.findMany({
       where: { planoId: { not: null }, status: "ATIVO" },
-      include: { plano: { select: { precoMensalCentavos: true } } },
+      select: { id: true, descontoPercent: true, plano: { select: { precoMensalCentavos: true } } },
     }),
     // Top tenants by event count this month
     prisma.registroEvento.groupBy({
@@ -76,8 +76,12 @@ export default async function MetricasPage() {
     }),
   ]);
 
-  // Compute MRR
-  const mrr = tenantsComPlano.reduce((acc, t) => acc + (t.plano?.precoMensalCentavos ?? 0), 0);
+  // Compute MRR applying individual discounts
+  const mrr = tenantsComPlano.reduce((acc, t) => {
+    const base = t.plano?.precoMensalCentavos ?? 0;
+    const efetivo = Math.round(base * (1 - (t.descontoPercent ?? 0) / 100));
+    return acc + efetivo;
+  }, 0);
 
   // Fetch top tenant names
   const topTenantIds = topConsumers.map(t => t.tenantId);

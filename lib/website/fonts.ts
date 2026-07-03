@@ -56,15 +56,3 @@ export function getFontClass(fonte: FonteWebsite): string {
       return inter.variable;
   }
 }
-
-/** TASA Orbiter — ainda não disponível em next/font/google; carregada via CSS do Google Fonts. */
-export const TASA_ORBITER_GOOGLE_URL =
-  "https://fonts.googleapis.com/css2?family=TASA+Orbiter:wght@400;500;600;700;800&display=swap";
-
-export const TASA_ORBITER_CLASS = "font-site-tasa-orbiter";
-
-export const TASA_ORBITER_CSS = `
-  .${TASA_ORBITER_CLASS} {
-    --font-site: "TASA Orbiter", system-ui, sans-serif;
-  }
-`;

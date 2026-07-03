@@ -25,6 +25,11 @@ enum EscopoUsuario {
   PLATAFORMA  // Super Admin (sem tenantId)
 }
 
+enum OtpProposito {
+  LOGIN
+  RESET_SENHA
+}
+
 enum StatusTenant {
   ATIVO
   SUSPENSO
@@ -360,6 +365,7 @@ model Tenant {
   configJson      Json?
   planoId         String?
   storageUsadoBytes Int        @default(0)  // soma de todos os uploads em bytes
+  descontoPercent   Int        @default(0)  // 0-100, desconto concedido pelo super admin
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -382,6 +388,8 @@ model Tenant {
   movimentacoes        Movimentacao[]
   modelosDocumento     ModeloDocumento[]
   registrosEvento      RegistroEvento[]
+  configuracaoFiscal   ConfiguracaoFiscal?
+  orcamentos           OrcamentoMensal[]
   documentos           Documento[]
   fluxosAssinatura     FluxoAssinatura[]
   integracoesConfig    IntegracaoConfig[]
@@ -422,6 +430,7 @@ model Usuario {
   accounts     Account[]
   sessions     Session[]
   auditLogs    AuditLog[]
+  otpCodes     OtpCode[]
 
   @@unique([tenantId, email])
   @@index([email])
@@ -524,6 +533,22 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_token")
+}
+
+model OtpCode {
+  id         String       @id @default(cuid())
+  usuarioId  String
+  codigoHash String
+  proposito  OtpProposito
+  expires    DateTime
+  tentativas Int          @default(0)
+  usadoEm    DateTime?
+  createdAt  DateTime     @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, proposito, expires])
+  @@map("otp_code")
 }
 
 // =========================================================================
@@ -1037,6 +1062,49 @@ model AnexoMovimentacao {
 
   @@index([movimentacaoId])
   @@map("anexo_movimentacao")
+}
+
+// ─── Configuração fiscal por tenant ──────────────────────────────────────────
+
+model ConfiguracaoFiscal {
+  id                    String   @id @default(cuid())
+  tenantId              String   @unique
+  regimeTributario      String   @default("simples")  // simples | lucro_presumido | lucro_real | mei
+  aliquotaImpostosPct   Decimal  @default(6)    // % sobre receita bruta (Simples padrão)
+  overheadMensalCentavos Int     @default(0)    // despesas fixas que não entram em categorias
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orcamentos OrcamentoMensal[]
+
+  @@map("configuracao_fiscal")
+}
+
+// ─── Orçamento mensal (DRE Planejado) ────────────────────────────────────────
+
+model OrcamentoMensal {
+  id             String   @id @default(cuid())
+  tenantId       String
+  configFiscalId String?
+  ano            Int
+  mes            Int      // 1–12
+  // JSON: { linhas: [{ tipo, descricao, categoriaId?, valorCentavos }] }
+  receitasJson   Json     @default("[]")
+  despesasJson   Json     @default("[]")
+  // Substituições pontuais (null = usa o padrão da ConfiguracaoFiscal)
+  aliquotaOverridesPct   Decimal?  // se null, usa ConfiguracaoFiscal.aliquotaImpostosPct
+  overheadOverrideCentavos Int?    // se null, usa ConfiguracaoFiscal.overheadMensalCentavos
+  observacoes    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  configFiscal ConfiguracaoFiscal? @relation(fields: [configFiscalId], references: [id])
+
+  @@unique([tenantId, ano, mes])
+  @@index([tenantId, ano, mes])
+  @@map("orcamento_mensal")
 }
 
 model Despesa {
