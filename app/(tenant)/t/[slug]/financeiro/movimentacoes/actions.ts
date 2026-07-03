@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/client";
 import { requireSession } from "@/lib/auth/session";
 import { GERAIS_BUCKET, getPublicUrl, uploadArquivo } from "@/lib/storage/supabase";
+import { atualizarStorageTenant } from "@/lib/tracking/eventos";
 
 async function getTenantId(): Promise<string> {
   const s = await requireSession();
@@ -154,6 +155,7 @@ export async function uploadAnexoMovimentacaoAction(
   const buffer = Buffer.from(await file.arrayBuffer());
   const storagePath = `financeiro/${movId}/anexos/${Date.now()}.${ext}`;
   await uploadArquivo(GERAIS_BUCKET, storagePath, buffer, file.type);
+  atualizarStorageTenant(tenantId, buffer.length);
   const url = getPublicUrl(GERAIS_BUCKET, storagePath);
 
   const anexo = await prisma.anexoMovimentacao.create({

@@ -179,6 +179,7 @@ export async function adicionarFotoItemAction(
     const buffer = Buffer.from(await file.arrayBuffer());
     const veiculoId = item.checklist.veiculo.id;
     const storagePath = await uploadFotoChecklist(
+      tenantId,
       veiculoId,
       item.checklistId,
       itemId,

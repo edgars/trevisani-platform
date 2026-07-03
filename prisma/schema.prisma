@@ -239,10 +239,16 @@ model Plano {
   descricao              String?
   precoMensalCentavos    Int      @default(0)
   precoAnualCentavos     Int      @default(0)
+  // Limites operacionais
   limiteUsuarios         Int      @default(5)
-  limiteVeiculos         Int      @default(50)
+  limiteVeiculos         Int      @default(50)    // -1 = ilimitado
+  limiteStorageMB        Int      @default(1024)  // -1 = ilimitado
+  limitePlacasMes        Int      @default(100)   // -1 = ilimitado
+  limiteCnpjsMes         Int      @default(50)    // -1 = ilimitado
+  limiteClientesMes      Int      @default(200)   // -1 = ilimitado
+  // Feature flags e integrações
   limiteIntegracoesJson  Json?    // { assinatura: true, whatsapp: false, ... }
-  featuresJson           Json?    // feature flags
+  featuresJson           Json?    // feature flags livres
   ativo                  Boolean  @default(true)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
@@ -251,6 +257,39 @@ model Plano {
   tenants     Tenant[]
 
   @@map("plano")
+}
+
+// ─── Eventos cobráveis (configuráveis pelo Super Admin) ──────────────────────
+
+model TipoEvento {
+  id            String   @id @default(cuid())
+  slug          String   @unique  // ex: "consulta_placa", "consulta_cnpj"
+  nome          String
+  descricao     String?
+  precoCentavos Int      @default(0)   // preço unitário quando fora do plano
+  ativo         Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  registros RegistroEvento[]
+
+  @@map("tipo_evento")
+}
+
+model RegistroEvento {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tipoEventoId  String
+  valorCentavos Int      @default(0)  // valor cobrado (0 = incluso no plano)
+  metadataJson  Json?                 // ex: { placa: "ABC1234" }
+  createdAt     DateTime @default(now())
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tipoEvento TipoEvento @relation(fields: [tipoEventoId], references: [id])
+
+  @@index([tenantId, tipoEventoId])
+  @@index([tenantId, createdAt])
+  @@map("registro_evento")
 }
 
 // Cache compartilhado de consultas públicas (Receita Federal / CEP).
@@ -310,18 +349,19 @@ model AssinaturaPlataforma {
 // =========================================================================
 
 model Tenant {
-  id           String       @id @default(cuid())
-  nome         String
-  razaoSocial  String?
-  cnpj         String?      @unique
-  slug         String       @unique
-  dominio      String?      @unique
-  logoUrl      String?
-  status       StatusTenant @default(TRIAL)
-  configJson   Json?
-  planoId      String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  nome            String
+  razaoSocial     String?
+  cnpj            String?      @unique
+  slug            String       @unique
+  dominio         String?      @unique
+  logoUrl         String?
+  status          StatusTenant @default(TRIAL)
+  configJson      Json?
+  planoId         String?
+  storageUsadoBytes Int        @default(0)  // soma de todos os uploads em bytes
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   plano                Plano?                @relation(fields: [planoId], references: [id])
   assinaturaPlataforma AssinaturaPlataforma?
@@ -341,6 +381,7 @@ model Tenant {
   contasBancarias      ContaBancaria[]
   movimentacoes        Movimentacao[]
   modelosDocumento     ModeloDocumento[]
+  registrosEvento      RegistroEvento[]
   documentos           Documento[]
   fluxosAssinatura     FluxoAssinatura[]
   integracoesConfig    IntegracaoConfig[]

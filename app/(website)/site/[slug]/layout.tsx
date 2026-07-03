@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { requireWebsite } from "@/lib/tenant/resolver";
 import { buildSiteStyles } from "@/lib/website/colors";
-import { getFontClass } from "@/lib/website/fonts";
+import {
+  TASA_ORBITER_CLASS,
+  TASA_ORBITER_CSS,
+  TASA_ORBITER_GOOGLE_URL,
+} from "@/lib/website/fonts";
 import { ThemeLayout } from "@/lib/website/themes";
 import type { WebsiteConfigData } from "@/lib/website/types";
 
@@ -48,7 +52,6 @@ export default async function WebsiteLayout({
   const cfg = tenant.websiteConfig;
 
   const siteStyles = buildSiteStyles(cfg.corPrimaria, cfg.corDestaque);
-  const fontClass = getFontClass(cfg.fonte);
 
   const configData: WebsiteConfigData = {
     tema: cfg.tema,
@@ -71,8 +74,11 @@ export default async function WebsiteLayout({
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: siteStyles }} />
-      <div className={fontClass}>
+      <link rel="stylesheet" href={TASA_ORBITER_GOOGLE_URL} />
+      <style
+        dangerouslySetInnerHTML={{ __html: `${TASA_ORBITER_CSS}\n${siteStyles}` }}
+      />
+      <div className={TASA_ORBITER_CLASS}>
         <ThemeLayout
           config={configData}
           tenantNome={tenant.nome}

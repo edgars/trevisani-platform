@@ -4,11 +4,12 @@ import { StatCard } from "@/components/portal/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/db/client";
+import { formatCentavos } from "@/lib/utils";
 
 export const metadata = { title: "Plataforma · Visão geral" };
 
 export default async function PlatformDashboardPage() {
-  const [tenantsAtivos, totalTenants, totalVeiculos, totalUsuarios, tenantsRecentes] =
+  const [tenantsAtivos, totalTenants, totalVeiculos, totalUsuarios, tenantsRecentes, tenantsComPlano] =
     await prisma.$transaction([
       prisma.tenant.count({ where: { status: "ATIVO" } }),
       prisma.tenant.count(),
@@ -19,7 +20,13 @@ export default async function PlatformDashboardPage() {
         orderBy: { createdAt: "desc" },
         include: { plano: true },
       }),
+      prisma.tenant.findMany({
+        where: { planoId: { not: null }, status: "ATIVO" },
+        include: { plano: { select: { precoMensalCentavos: true } } },
+      }),
     ]);
+
+  const mrr = tenantsComPlano.reduce((sum, t) => sum + (t.plano?.precoMensalCentavos ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -39,7 +46,7 @@ export default async function PlatformDashboardPage() {
         />
         <StatCard label="Usuários operacionais" value={totalUsuarios} icon={Users} />
         <StatCard label="Veículos cadastrados" value={totalVeiculos} icon={Car} />
-        <StatCard label="MRR estimado" value="—" icon={CreditCard} hint="Fase 4" />
+        <StatCard label="MRR estimado" value={formatCentavos(mrr)} icon={CreditCard} hint={`${tenantsComPlano.length} tenants pagantes`} />
       </div>
 
       <Card>

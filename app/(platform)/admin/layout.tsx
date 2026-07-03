@@ -5,12 +5,13 @@ import { requireScope } from "@/lib/auth/session";
 export const dynamic = "force-dynamic";
 
 const NAV: NavItem[] = [
-  { href: "/admin", label: "Visão geral", icon: "layoutdashboard", group: "Plataforma" },
-  { href: "/admin/tenants", label: "Tenants", icon: "building2", group: "Plataforma" },
-  { href: "/admin/planos", label: "Planos", icon: "creditcard", group: "Plataforma" },
-  { href: "/admin/metricas", label: "Métricas globais", icon: "barchart3", group: "Análise" },
-  { href: "/admin/impersonar", label: "Impersonação auditada", icon: "shieldalert", group: "Suporte" },
-  { href: "/admin/configuracoes", label: "Configurações", icon: "settings", group: "Suporte" },
+  { href: "/admin",          label: "Visão geral",          icon: "layoutdashboard", group: "Plataforma" },
+  { href: "/admin/tenants",  label: "Tenants",              icon: "building2",       group: "Plataforma" },
+  { href: "/admin/planos",   label: "Planos",               icon: "creditcard",      group: "Plataforma" },
+  { href: "/admin/eventos",  label: "Tipos de evento",      icon: "zap",             group: "Plataforma" },
+  { href: "/admin/metricas", label: "Métricas globais",     icon: "barchart3",       group: "Análise" },
+  { href: "/admin/impersonar",    label: "Impersonação auditada", icon: "shieldalert", group: "Suporte" },
+  { href: "/admin/configuracoes", label: "Configurações",        icon: "settings",    group: "Suporte" },
 ];
 
 export default async function PlatformLayout({

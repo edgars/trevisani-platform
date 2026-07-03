@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { atualizarStorageTenant } from "@/lib/tracking/eventos";
 
 export const FOTOS_BUCKET  = "veiculos-fotos";
 export const DOCS_BUCKET   = "veiculos-docs";
@@ -71,7 +72,9 @@ export async function uploadFoto(
   ext: string,
 ): Promise<string> {
   const path = `${tenantId}/${veiculoId}/${Date.now()}.${ext}`;
-  return uploadArquivo(FOTOS_BUCKET, path, buffer, contentType);
+  await uploadArquivo(FOTOS_BUCKET, path, buffer, contentType);
+  atualizarStorageTenant(tenantId, buffer.length);
+  return path;
 }
 
 export async function deleteFoto(storagePath: string): Promise<void> {
@@ -79,6 +82,7 @@ export async function deleteFoto(storagePath: string): Promise<void> {
 }
 
 export async function uploadFotoChecklist(
+  tenantId: string,
   veiculoId: string,
   checklistId: string,
   itemId: string,
@@ -87,7 +91,9 @@ export async function uploadFotoChecklist(
   ext: string,
 ): Promise<string> {
   const path = `checklists/${veiculoId}/${checklistId}/${itemId}/${Date.now()}.${ext}`;
-  return uploadArquivo(GERAIS_BUCKET, path, buffer, contentType);
+  await uploadArquivo(GERAIS_BUCKET, path, buffer, contentType);
+  atualizarStorageTenant(tenantId, buffer.length);
+  return path;
 }
 
 // ─── Logo do tenant ───────────────────────────────────────────────────────────
@@ -119,5 +125,6 @@ export async function uploadLogoTenant(
     .upload(storagePath, buffer, { contentType, upsert: true });
 
   if (error) throw new Error(`Upload logo: ${error.message}`);
+  atualizarStorageTenant(tenantId, buffer.length);
   return storagePath;
 }

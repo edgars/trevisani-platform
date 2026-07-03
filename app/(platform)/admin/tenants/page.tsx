@@ -7,6 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/db/client";
 import { formatDate } from "@/lib/utils";
 
+function formatBytes(b: number): string {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export const metadata = { title: "Tenants" };
 
 export default async function TenantsPage() {
@@ -47,6 +53,7 @@ export default async function TenantsPage() {
                   <th className="px-6 py-3 text-left">Plano</th>
                   <th className="px-6 py-3 text-left">Usuários</th>
                   <th className="px-6 py-3 text-left">Veículos</th>
+                  <th className="px-6 py-3 text-left">Storage</th>
                   <th className="px-6 py-3 text-left">Status</th>
                   <th className="px-6 py-3 text-left">Criado em</th>
                   <th className="px-6 py-3 text-right">Ações</th>
@@ -67,6 +74,7 @@ export default async function TenantsPage() {
                       <td className="px-6 py-3">{t.plano?.nome ?? "—"}</td>
                       <td className="px-6 py-3">{t._count.usuarios}</td>
                       <td className="px-6 py-3">{t._count.veiculos}</td>
+                      <td className="px-6 py-3 text-xs tabular-nums">{formatBytes(t.storageUsadoBytes)}</td>
                       <td className="px-6 py-3">
                         <Badge variant={t.status === "ATIVO" ? "success" : "secondary"}>
                           {t.status}
@@ -76,11 +84,16 @@ export default async function TenantsPage() {
                         {formatDate(t.createdAt)}
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/t/${t.slug}`} target="_blank">
-                            Abrir <ExternalLink className="ml-1 h-3 w-3" />
-                          </Link>
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/tenants/${t.id}`}>Ver detalhes</Link>
+                          </Button>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/t/${t.slug}`} target="_blank">
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))

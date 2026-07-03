@@ -10,6 +10,7 @@ import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { validarCpf, limparCpf } from "@/lib/utils/cpf";
 import { validarCnpj, consultarCnpj, type CnpjDados } from "@/lib/integrations/cnpj";
 import { GERAIS_BUCKET, getPublicUrl, uploadArquivo } from "@/lib/storage/supabase";
+import { registrarEvento, atualizarStorageTenant } from "@/lib/tracking/eventos";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,8 @@ export async function lookupClienteAction(
 
     const dados = await consultarCnpj(limpo);
     if (!dados) return { type: "cnpj_nao_encontrado", cnpj: limpo };
+    // Track CNPJ lookup (fire-and-forget)
+    registrarEvento(tenantId, "consulta_cnpj", { cnpj: limpo });
     return { type: "novo_pj", cnpj: limpo, dados };
   }
 
@@ -292,6 +295,7 @@ export async function uploadDocumentoClienteAction(
     const buffer = Buffer.from(await file.arrayBuffer());
     const storagePath = `clientes/${clienteId}/docs/${Date.now()}.${ext}`;
     await uploadArquivo(GERAIS_BUCKET, storagePath, buffer, file.type);
+    atualizarStorageTenant(tenantId, buffer.length);
     const url = getPublicUrl(GERAIS_BUCKET, storagePath);
 
     const doc = await prisma.documentoCliente.create({

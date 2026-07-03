@@ -21,6 +21,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Zap,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ export const NAV_ICONS = {
   truck: Truck,
   users: Users,
   wallet: Wallet,
+  zap: Zap,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof NAV_ICONS;

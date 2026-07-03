@@ -3,6 +3,7 @@
 import { requireSession } from "@/lib/auth/session";
 import { consultarPlaca } from "@/lib/integrations/placa/consultar";
 import type { ConsultaPlacaResult } from "@/lib/integrations/placa/consultar";
+import { registrarEvento } from "@/lib/tracking/eventos";
 
 /**
  * Server action chamada pelo formulário de cadastro de veículo.
@@ -16,5 +17,14 @@ export async function consultarPlacaAction(
     return { status: "erro", mensagem: "Sem permissão para consultar placas." };
   }
 
-  return consultarPlaca(placa);
+  const result = await consultarPlaca(placa);
+
+  // Track event only when the API was actually called (not served from cache)
+  if (result.status === "encontrado" && !result.fromCache && session.user.tenantId) {
+    registrarEvento(session.user.tenantId, "consulta_placa", { placa: placa.toUpperCase() });
+  } else if (result.status === "nao_encontrado" && session.user.tenantId) {
+    registrarEvento(session.user.tenantId, "consulta_placa", { placa: placa.toUpperCase(), naoEncontrado: true });
+  }
+
+  return result;
 }
