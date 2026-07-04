@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/leiloes/encerrar",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/plano/alertas-limite",
