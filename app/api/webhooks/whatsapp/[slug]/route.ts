@@ -69,7 +69,7 @@ export async function POST(
   const secret = req.headers.get("x-webhook-secret");
   const integracao = await prisma.integracaoWhatsApp.findFirst({
     where: { instanceName: slug },
-    select: { id: true, tenantId: true, webhookSecret: true, status: true },
+    select: { id: true, tenantId: true, webhookSecret: true, status: true, criarLeadAuto: true },
   });
 
   if (!integracao) {
@@ -84,7 +84,7 @@ export async function POST(
   try {
     switch (event) {
       case "MESSAGES_UPSERT":
-        await handleMessagesUpsert(integracao.id, data as unknown as MessageData);
+        await handleMessagesUpsert(integracao.id, integracao.tenantId, integracao.criarLeadAuto, data as unknown as MessageData);
         break;
 
       case "MESSAGES_UPDATE":
@@ -117,13 +117,17 @@ export async function POST(
 
 // ─── Event handlers ───────────────────────────────────────────────────────────
 
-async function handleMessagesUpsert(integracaoId: string, data: MessageData) {
+async function handleMessagesUpsert(
+  integracaoId: string,
+  tenantId: string,
+  criarLeadAuto: boolean,
+  data: MessageData,
+) {
   const { key, message, pushName, messageTimestamp } = data;
   if (!key?.remoteJid) return;
 
-  // Ignore group messages (JIDs ending with @g.us)
+  // Ignore group messages (JIDs ending with @g.us) and status broadcasts
   if (key.remoteJid.endsWith("@g.us")) return;
-  // Ignore status broadcasts
   if (key.remoteJid === "status@broadcast") return;
 
   const timestamp = messageTimestamp
@@ -159,7 +163,7 @@ async function handleMessagesUpsert(integracaoId: string, data: MessageData) {
     mediaUrl = message.stickerMessage.url ?? null;
   }
 
-  // Upsert conversa
+  // Upsert conversa (sem clienteId por enquanto)
   const conversa = await prisma.conversaWpp.upsert({
     where:  { integracaoId_remoteJid: { integracaoId, remoteJid: key.remoteJid } },
     update: {
@@ -174,21 +178,47 @@ async function handleMessagesUpsert(integracaoId: string, data: MessageData) {
       ultimaMensagem: timestamp,
       totalNaoLidas:  key.fromMe ? 0 : 1,
     },
-    select: { id: true },
+    select: { id: true, clienteId: true },
   });
 
-  // Try to link to ClienteFinal by phone number (best-effort)
-  if (!key.fromMe) {
+  // Vincula/cria ClienteFinal somente para mensagens recebidas (não enviadas pela loja)
+  if (!key.fromMe && !conversa.clienteId) {
     const numero = key.remoteJid.split("@")[0];
-    const cliente = await prisma.clienteFinal.findFirst({
-      where:  { telefone: { contains: numero.slice(-8) } },
+    // Últimos 8 dígitos para tolerar DDI/DDD variados no campo telefone
+    const sufixo = numero.slice(-8);
+
+    const clienteExistente = await prisma.clienteFinal.findFirst({
+      where:  { tenantId, telefone: { contains: sufixo } },
       select: { id: true },
     });
-    if (cliente) {
+
+    if (clienteExistente) {
+      // Vincula ao cliente já existente
       await prisma.conversaWpp.update({
         where: { id: conversa.id },
-        data:  { clienteId: cliente.id },
+        data:  { clienteId: clienteExistente.id },
       });
+    } else if (criarLeadAuto) {
+      // Cria novo lead automaticamente
+      const nomeWpp = pushName?.trim();
+      const novoCliente = await prisma.clienteFinal.create({
+        data: {
+          tenantId,
+          tipoPessoa: "PF",
+          nome:       nomeWpp && nomeWpp.length > 0 ? nomeWpp : `WhatsApp ${numero}`,
+          telefone:   numero,
+          documento:  `wpp:${numero}`, // placeholder — editável pelo lojista depois
+          tags:       ["lead-whatsapp"],
+        },
+        select: { id: true },
+      });
+
+      await prisma.conversaWpp.update({
+        where: { id: conversa.id },
+        data:  { clienteId: novoCliente.id },
+      });
+
+      console.info(`[WPP] Lead criado automaticamente: ${novoCliente.id} (${numero})`);
     }
   }
 

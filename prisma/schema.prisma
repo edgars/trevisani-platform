@@ -1519,6 +1519,7 @@ model IntegracaoWhatsApp {
   qrCode          String?   // base64 do QR atual (temporário)
   qrExpiresAt     DateTime?
   webhookSecret   String    // token para validar chamadas da Evolution API
+  criarLeadAuto   Boolean   @default(true) // cria ClienteFinal automaticamente ao receber mensagem de número desconhecido
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

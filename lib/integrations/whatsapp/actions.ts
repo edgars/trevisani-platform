@@ -207,6 +207,29 @@ export async function enviarMensagemAction(
   }
 }
 
+export async function atualizarConfigWppAction(
+  slug: string,
+  config: { criarLeadAuto: boolean },
+): Promise<{ error?: string }> {
+  await requireSession();
+  const tenant = await requireTenantPorSlug(slug);
+  await assertWppEnabled(tenant.id);
+
+  const integracao = await prisma.integracaoWhatsApp.findUnique({
+    where:  { tenantId: tenant.id },
+    select: { id: true },
+  });
+  if (!integracao) return { error: "Integração não encontrada. Conecte o WhatsApp primeiro." };
+
+  await prisma.integracaoWhatsApp.update({
+    where: { id: integracao.id },
+    data:  { criarLeadAuto: config.criarLeadAuto },
+  });
+
+  revalidatePath(`/t/${slug}/whatsapp/configurar`);
+  return {};
+}
+
 export async function marcarLidasAction(
   slug: string,
   conversaId: string,

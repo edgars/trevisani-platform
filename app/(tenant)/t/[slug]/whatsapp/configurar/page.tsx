@@ -14,7 +14,7 @@ export default async function WppConfigurarPage({ params }: { params: Promise<{ 
 
   const integracao = await prisma.integracaoWhatsApp.findUnique({
     where:  { tenantId: tenant.id },
-    select: { status: true, numeroConectado: true, qrCode: true },
+    select: { status: true, numeroConectado: true, qrCode: true, criarLeadAuto: true },
   });
 
   return (
@@ -30,6 +30,7 @@ export default async function WppConfigurarPage({ params }: { params: Promise<{ 
         initialStatus={integracao?.status ?? "DESCONECTADO"}
         initialNumero={integracao?.numeroConectado}
         initialQr={integracao?.qrCode}
+        initialCriarLeadAuto={integracao?.criarLeadAuto ?? true}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import {
-  CheckCircle2, Loader2, QrCode, RefreshCw, Smartphone, Trash2, Unplug, Wifi, WifiOff,
+  CheckCircle2, Loader2, QrCode, RefreshCw, Smartphone, Trash2, Unplug, UserPlus, Wifi, WifiOff,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatarNumero } from "@/lib/integrations/whatsapp/evolution";
 import {
+  atualizarConfigWppAction,
   conectarWhatsAppAction,
   desconectarWhatsAppAction,
   removerInstanciaAction,
@@ -23,6 +24,7 @@ interface Props {
   initialStatus: string;
   initialNumero?: string | null;
   initialQr?: string | null;
+  initialCriarLeadAuto: boolean;
 }
 
 const STATUS_META = {
@@ -32,11 +34,13 @@ const STATUS_META = {
   ERRO:          { label: "Erro de conexão",  color: "bg-red-500",     badge: "destructive" as const },
 };
 
-export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr }: Props) {
-  const [status, setStatus]  = React.useState(initialStatus);
-  const [numero, setNumero]  = React.useState<string | null>(initialNumero ?? null);
-  const [qrCode, setQrCode]  = React.useState<string | null>(initialQr ?? null);
-  const [pending, startTransition] = React.useTransition();
+export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, initialCriarLeadAuto }: Props) {
+  const [status, setStatus]         = React.useState(initialStatus);
+  const [numero, setNumero]         = React.useState<string | null>(initialNumero ?? null);
+  const [qrCode, setQrCode]         = React.useState<string | null>(initialQr ?? null);
+  const [criarLead, setCriarLead]   = React.useState(initialCriarLeadAuto);
+  const [savingCfg, setSavingCfg]   = React.useState(false);
+  const [pending, startTransition]  = React.useTransition();
 
   const meta = STATUS_META[status as keyof typeof STATUS_META] ?? STATUS_META.DESCONECTADO;
 
@@ -85,6 +89,19 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr }:
       setQrCode(null);
       toast.success("Instância removida.");
     });
+  }
+
+  async function handleToggleLead(valor: boolean) {
+    setCriarLead(valor);
+    setSavingCfg(true);
+    const result = await atualizarConfigWppAction(slug, { criarLeadAuto: valor });
+    setSavingCfg(false);
+    if (result.error) {
+      toast.error(result.error);
+      setCriarLead(!valor);
+    } else {
+      toast.success(valor ? "Criação automática de leads ativada." : "Criação automática de leads desativada.");
+    }
   }
 
   return (
@@ -208,6 +225,46 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr }:
               </li>
             ))}
           </ol>
+        </CardContent>
+      </Card>
+
+      {/* Automações */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <UserPlus className="h-4 w-4" /> Automações
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Toggle: criar lead automático */}
+          <div className="flex items-start justify-between gap-4 rounded-lg border bg-muted/20 px-4 py-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Criar lead automaticamente</p>
+              <p className="text-xs text-muted-foreground max-w-sm">
+                Quando um número desconhecido envia uma mensagem, um novo cliente é criado
+                automaticamente com a tag <code className="rounded bg-muted px-1 py-0.5">lead-whatsapp</code>.
+                Desative se preferir cadastrar clientes manualmente.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={criarLead}
+              disabled={savingCfg || status === "DESCONECTADO"}
+              onClick={() => handleToggleLead(!criarLead)}
+              title={status === "DESCONECTADO" ? "Conecte o WhatsApp primeiro" : undefined}
+              className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-40 ${criarLead ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${criarLead ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          {criarLead && status === "CONECTADO" && (
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              Leads serão criados automaticamente ao receber mensagens de números não cadastrados.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
