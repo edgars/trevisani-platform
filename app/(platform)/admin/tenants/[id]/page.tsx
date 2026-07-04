@@ -226,7 +226,7 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
             <CardTitle className="text-sm">Gerenciar status</CardTitle>
           </CardHeader>
           <CardContent>
-            <TenantStatusForm tenantId={id} currentStatus={tenant.status} planos={todosPlanosAtivos} currentPlanoId={tenant.planoId} descontoPercent={tenant.descontoPercent} leilaoHabilitado={tenant.leilaoHabilitado} />
+            <TenantStatusForm tenantId={id} currentStatus={tenant.status} planos={todosPlanosAtivos} currentPlanoId={tenant.planoId} descontoPercent={tenant.descontoPercent} leilaoHabilitado={tenant.leilaoHabilitado} whatsappHabilitado={tenant.whatsappHabilitado} />
           </CardContent>
         </Card>
       </div>

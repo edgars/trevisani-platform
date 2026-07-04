@@ -24,6 +24,7 @@ import {
   Zap,
   TrendingUp,
   Gavel,
+  MessageCircle,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ export const NAV_ICONS = {
   zap: Zap,
   trendingup: TrendingUp,
   gavel: Gavel,
+  messagecirlce: MessageCircle,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof NAV_ICONS;

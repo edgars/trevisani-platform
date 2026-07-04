@@ -3,12 +3,15 @@ import {
   ArrowRight,
   Car,
   CheckCircle2,
+  Gavel,
   Globe,
+  Handshake,
   LayoutDashboard,
   Receipt,
   Search,
   ShieldCheck,
   TrendingUp,
+  UserCog,
   Users,
   Wallet,
 } from "lucide-react";
@@ -55,10 +58,24 @@ const FUNCIONALIDADES = [
     destaque: false,
   },
   {
+    icon: Handshake,
+    badge: "Parceiros",
+    title: "Receba carros de parceiros sem perder o controle",
+    body: "Cadastre fornecedores e carros em consignação e saiba sempre o que é seu e o que é do parceiro. Na hora de acertar as contas, tudo certo e todo mundo satisfeito.",
+    destaque: false,
+  },
+  {
     icon: Users,
     badge: "Mais vendas",
     title: "Não deixe nenhum cliente interessado escapar",
     body: "Organize todas as propostas e conversas em um só lugar. Responda rápido, feche mais negócios e conquiste clientes satisfeitos que voltam a comprar.",
+    destaque: false,
+  },
+  {
+    icon: Gavel,
+    badge: "Leilão ao vivo",
+    title: "Deixe seus clientes disputarem o carro e venda pelo melhor preço",
+    body: "Crie um leilão ao vivo pra um carro específico e veja os lances chegarem em tempo real. Quem paga mais leva — e você vende sempre pelo maior valor.",
     destaque: false,
   },
   {
@@ -87,6 +104,13 @@ const FUNCIONALIDADES = [
     badge: "Decisões certas",
     title: "Descubra o que está funcionando na sua loja",
     body: "Veja quais carros vendem mais rápido, quem são seus melhores vendedores e quanto sua loja faturou. Tudo em números fáceis de entender, sem planilha.",
+    destaque: false,
+  },
+  {
+    icon: UserCog,
+    badge: "Sua equipe",
+    title: "Coloque toda a equipe pra trabalhar junto, sem bagunça",
+    body: "Defina o que cada vendedor, financeiro ou gerente pode ver e fazer. Todo mundo com acesso só ao que precisa, trabalhando organizado no mesmo sistema.",
     destaque: false,
   },
 ];
@@ -243,7 +267,7 @@ export default function HomePage() {
 
           <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Card destaque (busca de placa) — ocupa 2 colunas */}
-            <Card className="lg:col-span-2 border-red-200 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-background dark:border-red-900/40">
+            <Card className="md:col-span-2 lg:col-span-2 border-red-200 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-background dark:border-red-900/40">
               <CardHeader>
                 <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-red-600 text-white">
                   <Search className="h-5 w-5" />

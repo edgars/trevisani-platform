@@ -47,7 +47,7 @@ export async function alterarDescontoTenantAction(
 
 export async function alterarFeatureTenantAction(
   tenantId: string,
-  feature: "leilaoHabilitado",
+  feature: "leilaoHabilitado" | "whatsappHabilitado",
   valor: boolean,
 ): Promise<{ error?: string }> {
   await assertAdmin();

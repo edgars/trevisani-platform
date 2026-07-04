@@ -366,7 +366,8 @@ model Tenant {
   planoId         String?
   storageUsadoBytes  Int        @default(0)  // soma de todos os uploads em bytes
   descontoPercent    Int        @default(0)  // 0-100, desconto concedido pelo super admin
-  leilaoHabilitado   Boolean    @default(false) // feature flag: módulo de leilão
+  leilaoHabilitado      Boolean    @default(false) // feature flag: módulo de leilão
+  whatsappHabilitado    Boolean    @default(false) // feature flag: módulo WhatsApp
   // Preenchido quando o lojista solicita upgrade de plano (pagamento ainda manual).
   // Usado para alertar o Super Admin em /admin/tenants e evitar notificações duplicadas.
   upgradeSolicitadoEm DateTime?
@@ -397,6 +398,7 @@ model Tenant {
   documentos           Documento[]
   fluxosAssinatura     FluxoAssinatura[]
   leiloes              Leilao[]
+  integracaoWhatsApp   IntegracaoWhatsApp?
   integracoesConfig    IntegracaoConfig[]
   emailLogs            EmailLog[]
   mensagensWhatsapp    MensagemWhatsapp[]
@@ -651,6 +653,7 @@ model ClienteFinal {
   movimentacoes Movimentacao[]
   lances        Lance[]
   leioesVencidos Leilao[]         @relation("LeilaoVencedor")
+  conversasWpp   ConversaWpp[]
 
   @@unique([tenantId, documento])
   @@index([tenantId, nome])
@@ -1496,6 +1499,73 @@ model AuditLog {
 
   @@index([tenantId, entidade, createdAt])
   @@map("audit_log")
+}
+
+// ─── Módulo WhatsApp (Evolution API) ─────────────────────────────────────────
+
+enum StatusWpp {
+  DESCONECTADO
+  AGUARDANDO_QR
+  CONECTADO
+  ERRO
+}
+
+model IntegracaoWhatsApp {
+  id              String    @id @default(cuid())
+  tenantId        String    @unique
+  instanceName    String    @unique // = tenant slug
+  status          StatusWpp @default(DESCONECTADO)
+  numeroConectado String?
+  qrCode          String?   // base64 do QR atual (temporário)
+  qrExpiresAt     DateTime?
+  webhookSecret   String    // token para validar chamadas da Evolution API
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversas ConversaWpp[]
+
+  @@map("integracao_whatsapp")
+}
+
+model ConversaWpp {
+  id             String    @id @default(cuid())
+  integracaoId   String
+  remoteJid      String    // numero@s.whatsapp.net
+  nomeContato    String?
+  clienteId      String?   // vínculo ao ClienteFinal se número cadastrado
+  totalNaoLidas  Int       @default(0)
+  ultimaMensagem DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  integracao IntegracaoWhatsApp @relation(fields: [integracaoId], references: [id], onDelete: Cascade)
+  cliente    ClienteFinal?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  mensagens  MensagemWpp[]
+
+  @@unique([integracaoId, remoteJid])
+  @@index([integracaoId, ultimaMensagem])
+  @@map("conversa_wpp")
+}
+
+model MensagemWpp {
+  id          String   @id @default(cuid())
+  conversaId  String
+  messageId   String   // ID da Evolution API (deduplicação)
+  fromMe      Boolean
+  tipo        String   @default("text") // text | image | audio | document | sticker
+  corpo       String?  // texto da mensagem
+  mediaUrl    String?  // URL pública da mídia
+  mimetype    String?
+  lida        Boolean  @default(false)
+  timestamp   DateTime
+  createdAt   DateTime @default(now())
+
+  conversa ConversaWpp @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+
+  @@unique([conversaId, messageId])
+  @@index([conversaId, timestamp])
+  @@map("mensagem_wpp")
 }
 
 // ─── Módulo de Leilão ─────────────────────────────────────────────────────────

@@ -24,14 +24,16 @@ interface Props {
   currentPlanoId: string | null;
   descontoPercent: number;
   leilaoHabilitado: boolean;
+  whatsappHabilitado: boolean;
 }
 
-export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlanoId, descontoPercent, leilaoHabilitado }: Props) {
+export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlanoId, descontoPercent, leilaoHabilitado, whatsappHabilitado }: Props) {
   const router = useRouter();
-  const [status,   setStatus]   = React.useState(currentStatus);
-  const [planoId,  setPlanoId]  = React.useState(currentPlanoId ?? "");
-  const [desconto, setDesconto] = React.useState(String(descontoPercent));
-  const [leilao,   setLeilao]   = React.useState(leilaoHabilitado);
+  const [status,    setStatus]    = React.useState(currentStatus);
+  const [planoId,   setPlanoId]   = React.useState(currentPlanoId ?? "");
+  const [desconto,  setDesconto]  = React.useState(String(descontoPercent));
+  const [leilao,    setLeilao]    = React.useState(leilaoHabilitado);
+  const [whatsapp,  setWhatsapp]  = React.useState(whatsappHabilitado);
   const [isPending, startTransition] = React.useTransition();
 
   function saveStatus() {
@@ -139,31 +141,36 @@ export function TenantStatusForm({ tenantId, currentStatus, planos, currentPlano
       {/* Feature flags */}
       <div className="space-y-2 pt-1">
         <p className="text-xs font-medium text-muted-foreground">Módulos opcionais</p>
-        <label className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 px-3 py-2.5">
-          <div>
-            <p className="text-xs font-medium">Leilão de veículos</p>
-            <p className="text-[10px] text-muted-foreground">Permite criar leilões públicos em tempo real</p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={leilao}
-            onClick={() => {
-              const novo = !leilao;
-              setLeilao(novo);
-              startTransition(async () => {
-                const result = await alterarFeatureTenantAction(tenantId, "leilaoHabilitado", novo);
-                if (result.error) { toast.error(result.error); setLeilao(!novo); return; }
-                toast.success(novo ? "Módulo de leilão habilitado." : "Módulo de leilão desabilitado.");
-                router.refresh();
-              });
-            }}
-            disabled={isPending}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${leilao ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
-          >
-            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${leilao ? "translate-x-4" : "translate-x-1"}`} />
-          </button>
-        </label>
+        {[
+          { key: "leilaoHabilitado" as const,   label: "Leilão de veículos",  desc: "Permite criar leilões públicos em tempo real",        value: leilao,   set: setLeilao },
+          { key: "whatsappHabilitado" as const,  label: "WhatsApp integrado",  desc: "Inbox de conversas e agente IA via Evolution API",    value: whatsapp, set: setWhatsapp },
+        ].map(feat => (
+          <label key={feat.key} className="flex cursor-pointer items-center justify-between rounded-lg border bg-muted/20 px-3 py-2.5">
+            <div>
+              <p className="text-xs font-medium">{feat.label}</p>
+              <p className="text-[10px] text-muted-foreground">{feat.desc}</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={feat.value}
+              onClick={() => {
+                const novo = !feat.value;
+                feat.set(novo);
+                startTransition(async () => {
+                  const result = await alterarFeatureTenantAction(tenantId, feat.key, novo);
+                  if (result.error) { toast.error(result.error); feat.set(!novo); return; }
+                  toast.success(novo ? `${feat.label} habilitado.` : `${feat.label} desabilitado.`);
+                  router.refresh();
+                });
+              }}
+              disabled={isPending}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${feat.value ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${feat.value ? "translate-x-4" : "translate-x-1"}`} />
+            </button>
+          </label>
+        ))}
       </div>
     </div>
   );
