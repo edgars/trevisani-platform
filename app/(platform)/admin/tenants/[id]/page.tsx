@@ -86,6 +86,16 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="space-y-6">
+      {tenant.upgradeSolicitadoEm && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-400">
+          <TrendingUp className="h-4 w-4 shrink-0" />
+          <span>
+            Este tenant solicitou upgrade de plano em {formatDate(tenant.upgradeSolicitadoEm)}.
+            Combine o pagamento manualmente e atualize o plano/status abaixo.
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">

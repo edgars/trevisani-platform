@@ -8,6 +8,7 @@ import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
 import { parseCentavos } from "@/lib/utils";
+import { verificarLimiteVeiculos, notificarLimiteVeiculosAtingido } from "@/lib/tenant/upgrade";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -52,9 +53,9 @@ const veiculoSchema = z.object({
 
 export async function criarVeiculoAction(
   tenantSlug: string,
-  _prevState: { error?: string } | null,
+  _prevState: { error?: string; upgradeRequired?: boolean } | null,
   formData: FormData,
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; upgradeRequired?: boolean }> {
   // Sessão já contém tenantId — sem round-trip extra ao banco
   const session = await requireSession();
 
@@ -63,10 +64,25 @@ export async function criarVeiculoAction(
   }
 
   // Para PLATAFORMA (super admin) precisamos resolver o tenant; para STAFF usamos o da sessão
-  const tenantId =
-    session.user.escopo === "PLATAFORMA"
-      ? (await requireTenantPorSlug(tenantSlug)).id
-      : session.user.tenantId!;
+  const tenant = await requireTenantPorSlug(tenantSlug);
+  const tenantId = session.user.escopo === "PLATAFORMA" ? tenant.id : session.user.tenantId!;
+
+  const limiteInfo = await verificarLimiteVeiculos(tenantId);
+  if (limiteInfo.atingido) {
+    await notificarLimiteVeiculosAtingido({
+      tenantId,
+      tenantSlug,
+      tenantNome: tenant.nome,
+      planoNome: limiteInfo.planoNome,
+      limite: limiteInfo.limite,
+      totalVeiculos: limiteInfo.total,
+    }).catch(() => {});
+
+    return {
+      error: `Você atingiu o limite de ${limiteInfo.limite} veículos do plano ${limiteInfo.planoNome}. Faça upgrade para continuar cadastrando.`,
+      upgradeRequired: true,
+    };
+  }
 
   const raw = {
     tipo:                 formData.get("tipo"),

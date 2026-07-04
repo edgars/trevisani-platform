@@ -4,6 +4,10 @@
     {
       "path": "/api/leiloes/encerrar",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/plano/alertas-limite",
+      "schedule": "0 9 * * *"
     }
   ]
 }

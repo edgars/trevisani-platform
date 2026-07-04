@@ -8,7 +8,7 @@ export const metadata = { title: "Entrar — Volante7" };
 
 const DESTAQUES = [
   { icon: Search, text: "Cadastro de veículo com busca automática por placa" },
-  { icon: LayoutDashboard, text: "Kanban de estoque com status em tempo real" },
+  { icon: LayoutDashboard, text: "Painel visual do estoque, sempre atualizado" },
   { icon: Globe, text: "Vitrine online inclusa para cada loja" },
   { icon: TrendingUp, text: "DRE por veículo e métricas de giro de estoque" },
 ];
@@ -95,10 +95,10 @@ export default async function LoginPage({
           <span className="text-sm text-muted-foreground">
             Ainda não tem conta?{" "}
             <Link
-              href="/planos"
+              href="/cadastro"
               className="font-medium text-primary hover:underline"
             >
-              Ver planos
+              Criar conta grátis
             </Link>
           </span>
         </div>
@@ -165,8 +165,8 @@ export default async function LoginPage({
             {/* Link "Ver planos" — mobile */}
             <p className="text-center text-sm text-muted-foreground lg:hidden">
               Ainda não tem conta?{" "}
-              <Link href="/planos" className="font-medium text-primary hover:underline">
-                Ver planos
+              <Link href="/cadastro" className="font-medium text-primary hover:underline">
+                Criar conta grátis
               </Link>
             </p>
           </div>

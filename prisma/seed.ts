@@ -1,83 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+import {
+  garantirPermissoesBase,
+  provisionarPapeisPadraoTenant,
+} from "../lib/tenant/papeis-padrao";
+
 const prisma = new PrismaClient();
-
-const PERMISSOES_BASE = [
-  // Tenant admin
-  { slug: "tenant.gerenciar", modulo: "tenant", acao: "gerenciar" },
-  { slug: "usuario.gerenciar", modulo: "usuario", acao: "gerenciar" },
-  { slug: "papel.gerenciar", modulo: "papel", acao: "gerenciar" },
-  { slug: "integracao.gerenciar", modulo: "integracao", acao: "gerenciar" },
-  // Estoque
-  { slug: "veiculo.criar", modulo: "veiculo", acao: "criar" },
-  { slug: "veiculo.editar", modulo: "veiculo", acao: "editar" },
-  { slug: "veiculo.remover", modulo: "veiculo", acao: "remover" },
-  { slug: "veiculo.listar", modulo: "veiculo", acao: "listar" },
-  // Compras
-  { slug: "compra.criar", modulo: "compra", acao: "criar" },
-  { slug: "compra.aprovar", modulo: "compra", acao: "aprovar" },
-  { slug: "compra.listar", modulo: "compra", acao: "listar" },
-  // Vendas
-  { slug: "venda.criar", modulo: "venda", acao: "criar" },
-  { slug: "venda.aprovar", modulo: "venda", acao: "aprovar" },
-  { slug: "venda.listar", modulo: "venda", acao: "listar" },
-  // Financeiro
-  { slug: "financeiro.gerenciar", modulo: "financeiro", acao: "gerenciar" },
-  { slug: "financeiro.visualizar", modulo: "financeiro", acao: "visualizar" },
-  // Ofertas (fornecedor)
-  { slug: "oferta.criar", modulo: "oferta", acao: "criar" },
-  { slug: "oferta.listar", modulo: "oferta", acao: "listar" },
-  // Documentos
-  { slug: "documento.gerar", modulo: "documento", acao: "gerar" },
-  { slug: "documento.assinar", modulo: "documento", acao: "assinar" },
-] as const;
-
-const PAPEIS_PADRAO: Array<{
-  slug: string;
-  nome: string;
-  descricao: string;
-  permissoes: string[];
-}> = [
-  {
-    slug: "admin",
-    nome: "Administrador",
-    descricao: "Acesso total ao tenant.",
-    permissoes: PERMISSOES_BASE.map((p) => p.slug),
-  },
-  {
-    slug: "vendedor",
-    nome: "Vendedor",
-    descricao: "Cria propostas e vendas, consulta estoque.",
-    permissoes: [
-      "veiculo.listar",
-      "venda.criar",
-      "venda.listar",
-      "documento.gerar",
-      "financeiro.visualizar",
-    ],
-  },
-  {
-    slug: "comprador",
-    nome: "Comprador",
-    descricao: "Analisa ofertas de fornecedores e registra compras.",
-    permissoes: [
-      "veiculo.criar",
-      "veiculo.editar",
-      "veiculo.listar",
-      "oferta.listar",
-      "compra.criar",
-      "compra.aprovar",
-      "compra.listar",
-    ],
-  },
-  {
-    slug: "financeiro",
-    nome: "Financeiro",
-    descricao: "Gestão de pagamentos, despesas e conciliação.",
-    permissoes: ["financeiro.gerenciar", "financeiro.visualizar"],
-  },
-];
 
 async function main() {
   console.log("Populando plataforma...");
@@ -91,52 +20,110 @@ async function main() {
     },
   });
 
-  const planoStarter = await prisma.plano.upsert({
-    where: { slug: "starter" },
-    update: {},
+  // ─── Planos padrão (upsert preserva dados existentes de tenants) ──────────
+  const planoGratis = await prisma.plano.upsert({
+    where: { slug: "gratis" },
+    update: {
+      nome: "Grátis", precoMensalCentavos: 0, precoAnualCentavos: 0,
+      limiteUsuarios: 1, limiteVeiculos: 10, limiteStorageMB: 512,
+      limitePlacasMes: 10, limiteCnpjsMes: 5,
+    },
     create: {
-      nome: "Starter",
-      slug: "starter",
-      descricao: "Ideal para lojas iniciantes: 3 usuários, 30 veículos.",
-      precoMensalCentavos: 19900,
-      precoAnualCentavos: 199900,
-      limiteUsuarios: 3,
-      limiteVeiculos: 30,
-      limiteIntegracoesJson: {
-        assinatura: false,
-        whatsapp: false,
-        email: true,
-      },
+      nome: "Grátis", slug: "gratis",
+      descricao: "Para começar sem custo: até 10 veículos, 10 consultas de placa/mês.",
+      precoMensalCentavos: 0, precoAnualCentavos: 0,
+      limiteUsuarios: 1, limiteVeiculos: 10, limiteStorageMB: 512,
+      limitePlacasMes: 10, limiteCnpjsMes: 5,
+      limiteIntegracoesJson: { assinatura: false, whatsapp: false, email: true },
     },
   });
 
+  const planoStarter = await prisma.plano.upsert({
+    where: { slug: "starter" },
+    update: {
+      nome: "Starter", precoMensalCentavos: 14900, precoAnualCentavos: 149000,
+      limiteUsuarios: 2, limiteVeiculos: 30, limiteStorageMB: 2048,
+      limitePlacasMes: 30, limiteCnpjsMes: 20,
+    },
+    create: {
+      nome: "Starter", slug: "starter",
+      descricao: "Para lojas pequenas: 30 veículos, 2 usuários, 30 consultas de placa/mês.",
+      precoMensalCentavos: 14900, precoAnualCentavos: 149000,
+      limiteUsuarios: 2, limiteVeiculos: 30, limiteStorageMB: 2048,
+      limitePlacasMes: 30, limiteCnpjsMes: 20,
+      limiteIntegracoesJson: { assinatura: false, whatsapp: false, email: true },
+    },
+  });
+
+  const planoProfissional = await prisma.plano.upsert({
+    where: { slug: "profissional" },
+    update: {
+      nome: "Profissional", precoMensalCentavos: 38900, precoAnualCentavos: 389000,
+      limiteUsuarios: 5, limiteVeiculos: 150, limiteStorageMB: 10240,
+      limitePlacasMes: 150, limiteCnpjsMes: 100,
+    },
+    create: {
+      nome: "Profissional", slug: "profissional",
+      descricao: "Para lojas em crescimento: DRE completo, 150 veículos, 5 usuários.",
+      precoMensalCentavos: 38900, precoAnualCentavos: 389000,
+      limiteUsuarios: 5, limiteVeiculos: 150, limiteStorageMB: 10240,
+      limitePlacasMes: 150, limiteCnpjsMes: 100,
+      limiteIntegracoesJson: { assinatura: true, whatsapp: false, email: true },
+    },
+  });
+
+  const planoPremium = await prisma.plano.upsert({
+    where: { slug: "premium" },
+    update: {
+      nome: "Premium", precoMensalCentavos: 74900, precoAnualCentavos: 749000,
+      limiteUsuarios: 15, limiteVeiculos: 500, limiteStorageMB: 30720,
+      limitePlacasMes: 500, limiteCnpjsMes: 300,
+    },
+    create: {
+      nome: "Premium", slug: "premium",
+      descricao: "Para lojas grandes: leilão habilitado, 500 veículos, 15 usuários.",
+      precoMensalCentavos: 74900, precoAnualCentavos: 749000,
+      limiteUsuarios: 15, limiteVeiculos: 500, limiteStorageMB: 30720,
+      limitePlacasMes: 500, limiteCnpjsMes: 300,
+      limiteIntegracoesJson: { assinatura: true, whatsapp: true, email: true },
+      featuresJson: { leilao: true },
+    },
+  });
+
+  const planoEnterprise = await prisma.plano.upsert({
+    where: { slug: "enterprise" },
+    update: {
+      nome: "Enterprise", precoMensalCentavos: 140000, precoAnualCentavos: 1400000,
+      limiteUsuarios: -1, limiteVeiculos: -1, limiteStorageMB: -1,
+      limitePlacasMes: -1, limiteCnpjsMes: -1,
+    },
+    create: {
+      nome: "Enterprise", slug: "enterprise",
+      descricao: "Para grupos e concessionárias: tudo ilimitado, SLA dedicado.",
+      precoMensalCentavos: 140000, precoAnualCentavos: 1400000,
+      limiteUsuarios: -1, limiteVeiculos: -1, limiteStorageMB: -1,
+      limitePlacasMes: -1, limiteCnpjsMes: -1,
+      limiteIntegracoesJson: { assinatura: true, whatsapp: true, email: true },
+      featuresJson: { leilao: true, multiSlug: true },
+    },
+  });
+
+  // Keep the old "pro" slug pointing to Enterprise for backwards compatibility
   const planoPro = await prisma.plano.upsert({
     where: { slug: "pro" },
     update: {},
     create: {
-      nome: "Pro",
-      slug: "pro",
-      descricao: "Loja em crescimento: usuários e veículos ilimitados.",
-      precoMensalCentavos: 49900,
-      precoAnualCentavos: 499900,
-      limiteUsuarios: 999,
-      limiteVeiculos: 9999,
-      limiteIntegracoesJson: {
-        assinatura: true,
-        whatsapp: true,
-        email: true,
-      },
+      nome: "Pro (legado)", slug: "pro",
+      descricao: "Plano legado — migrar para Enterprise.",
+      precoMensalCentavos: 49900, precoAnualCentavos: 499000,
+      limiteUsuarios: -1, limiteVeiculos: -1, limiteStorageMB: -1,
+      limitePlacasMes: -1, limiteCnpjsMes: -1,
+      limiteIntegracoesJson: { assinatura: true, whatsapp: true, email: true },
     },
   });
 
   console.log("Populando permissões...");
-  for (const p of PERMISSOES_BASE) {
-    await prisma.permissao.upsert({
-      where: { slug: p.slug },
-      update: {},
-      create: p,
-    });
-  }
+  await garantirPermissoesBase(prisma);
 
   console.log("Criando Super Admin...");
   const senhaAdmin = await bcrypt.hash("admin@123", 10);
@@ -150,6 +137,7 @@ async function main() {
         nome: "Super Admin",
         email: "admin@autogestao.com",
         senhaHash: senhaAdmin,
+        emailVerified: new Date(),
       },
     });
   }
@@ -168,41 +156,20 @@ async function main() {
   });
 
   console.log("Criando papéis padrão do tenant demo...");
-  for (const p of PAPEIS_PADRAO) {
-    const papel = await prisma.papel.upsert({
-      where: { tenantId_slug: { tenantId: tenant.id, slug: p.slug } },
-      update: { nome: p.nome, descricao: p.descricao, sistemico: true },
-      create: {
-        tenantId: tenant.id,
-        slug: p.slug,
-        nome: p.nome,
-        descricao: p.descricao,
-        sistemico: true,
-      },
-    });
-    for (const permSlug of p.permissoes) {
-      const permissao = await prisma.permissao.findUnique({ where: { slug: permSlug } });
-      if (permissao) {
-        await prisma.papelPermissao.upsert({
-          where: { papelId_permissaoId: { papelId: papel.id, permissaoId: permissao.id } },
-          update: {},
-          create: { papelId: papel.id, permissaoId: permissao.id },
-        });
-      }
-    }
-  }
+  await provisionarPapeisPadraoTenant(prisma, tenant.id);
 
   console.log("Criando usuário admin do tenant demo...");
   const senhaTenant = await bcrypt.hash("demo@123", 10);
   const usuario = await prisma.usuario.upsert({
     where: { tenantId_email: { tenantId: tenant.id, email: "admin@demo.com" } },
-    update: {},
+    update: { emailVerified: new Date() },
     create: {
       tenantId: tenant.id,
       escopo: "STAFF",
       nome: "Admin Demo",
       email: "admin@demo.com",
       senhaHash: senhaTenant,
+      emailVerified: new Date(),
     },
   });
 
@@ -244,7 +211,7 @@ async function main() {
 
   console.log("\n✓ Seed concluído.");
   console.log(`  Plataforma: ${plataforma.nome}`);
-  console.log(`  Planos: ${planoStarter.slug}, ${planoPro.slug}`);
+  console.log(`  Planos: ${planoGratis.slug}, ${planoStarter.slug}, ${planoProfissional.slug}, ${planoPremium.slug}, ${planoEnterprise.slug}, ${planoPro.slug}`);
   console.log(`  Tenant demo criado em /t/${tenant.slug}`);
   console.log(`  Super Admin  -> admin@autogestao.com / admin@123`);
   console.log(`  Admin tenant -> admin@demo.com / demo@123`);

@@ -7,6 +7,7 @@ export type UsuarioAuth = {
   nome: string;
   email: string;
   senhaHash: string | null;
+  emailVerified: Date | null;
   imageUrl: string | null;
   tenantId: string | null;
   escopo: EscopoUsuario;
@@ -20,6 +21,7 @@ type UsuarioRow = {
   nome: string;
   email: string;
   senhaHash: string | null;
+  emailVerified: Date | null;
   imageUrl: string | null;
   tenantId: string | null;
   escopo: string;
@@ -35,6 +37,7 @@ export async function findUsuarioByEmail(email: string): Promise<UsuarioAuth | n
       u.nome,
       u.email,
       u."senhaHash",
+      u."emailVerified",
       u."imageUrl",
       u."tenantId",
       u.escopo::text,
@@ -49,7 +52,7 @@ export async function findUsuarioByEmail(email: string): Promise<UsuarioAuth | n
     LEFT   JOIN permissao       pm ON pm.id = pp."permissaoId"
     WHERE  u.email = ${email}
       AND  u.ativo = true
-    GROUP  BY u.id, u.nome, u.email, u."senhaHash", u."imageUrl",
+    GROUP  BY u.id, u.nome, u.email, u."senhaHash", u."emailVerified", u."imageUrl",
               u."tenantId", u.escopo, t.slug
     LIMIT  1
   `;
@@ -62,6 +65,7 @@ export async function findUsuarioByEmail(email: string): Promise<UsuarioAuth | n
     nome: usuario.nome,
     email: usuario.email,
     senhaHash: usuario.senhaHash,
+    emailVerified: usuario.emailVerified,
     imageUrl: usuario.imageUrl,
     tenantId: usuario.tenantId,
     escopo: usuario.escopo as EscopoUsuario,

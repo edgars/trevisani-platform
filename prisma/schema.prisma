@@ -367,6 +367,9 @@ model Tenant {
   storageUsadoBytes  Int        @default(0)  // soma de todos os uploads em bytes
   descontoPercent    Int        @default(0)  // 0-100, desconto concedido pelo super admin
   leilaoHabilitado   Boolean    @default(false) // feature flag: módulo de leilão
+  // Preenchido quando o lojista solicita upgrade de plano (pagamento ainda manual).
+  // Usado para alertar o Super Admin em /admin/tenants e evitar notificações duplicadas.
+  upgradeSolicitadoEm DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

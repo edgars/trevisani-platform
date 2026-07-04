@@ -10,6 +10,7 @@ import {
   touchUltimoLogin,
 } from "@/lib/auth/load-usuario";
 import { verifyLoginOtp } from "@/lib/auth/password-reset";
+import { EmailNaoConfirmadoError } from "@/lib/auth/errors";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -41,6 +42,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const senhaOk = await bcrypt.compare(senha, usuario.senhaHash);
         if (!senhaOk) return null;
+
+        if (!usuario.emailVerified) {
+          throw new EmailNaoConfirmadoError();
+        }
 
         touchUltimoLogin(usuario.id);
         return toAuthUser(usuario);

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { PortalShell } from "@/components/portal/portal-shell";
 import type { NavItem } from "@/components/portal/sidebar-nav";
+import { LimiteAlertBanner } from "@/components/portal/limite-alert-banner";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 
@@ -51,6 +52,7 @@ export default async function TenantLayout({
     { href: `/t/${slug}/documentos`, label: "Documentos", icon: "filesignature", group: "Gestão" },
     { href: `/t/${slug}/relatorios`, label: "Relatórios", icon: "barchart3", group: "Gestão" },
     { href: `/t/${slug}/website`, label: "Website", icon: "globe", group: "Gestão" },
+    { href: `/t/${slug}/configuracoes/plano`, label: "Plano", icon: "creditcard", group: "Gestão" },
     { href: `/t/${slug}/configuracoes`, label: "Configurações", icon: "settings", group: "Gestão" },
   ];
 
@@ -71,7 +73,10 @@ export default async function TenantLayout({
             : "Staff",
       }}
     >
-      {children}
+      <>
+        <LimiteAlertBanner tenantId={tenant.id} slug={slug} />
+        {children}
+      </>
     </PortalShell>
   );
 }

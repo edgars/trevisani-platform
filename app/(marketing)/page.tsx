@@ -16,6 +16,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getTenantPublicUrl } from "@/lib/tenant/public-url";
+
+const DEMO_URL = getTenantPublicUrl("demo");
 
 // ─── Layout util ─────────────────────────────────────────────────────────────
 
@@ -32,58 +35,58 @@ function Wrap({ children, className = "" }: { children: React.ReactNode; classNa
 const FUNCIONALIDADES = [
   {
     icon: Search,
-    badge: "Automação",
-    title: "Busca de placa inteligente",
-    body: "Digite a placa e o sistema preenche automaticamente marca, modelo, ano, cor, chassi e situação documental via DETRAN. A tabela FIPE já vem como sugestão de preço.",
+    badge: "Rapidez",
+    title: "Cadastre um carro em segundos, só com a placa",
+    body: "Digite a placa e pronto: marca, modelo, ano, cor e a documentação aparecem na hora, sem você precisar digitar nada. Mais tempo pra vender, menos tempo digitando.",
     destaque: true,
   },
   {
     icon: LayoutDashboard,
-    badge: "Estoque",
-    title: "Kanban visual de estoque",
-    body: "Visualize todos os veículos em colunas por status: Em Preparação, Disponível, Reservado, Negociando e Vendido. Controle o ciclo de vida de cada placa.",
+    badge: "Organização",
+    title: "Veja todo o seu estoque em um único lugar",
+    body: "Saiba de cara quais carros estão prontos pra vender, quais estão reservados e quais já foram vendidos. Nada se perde e nada passa despercebido.",
     destaque: false,
   },
   {
     icon: Car,
-    badge: "Compras",
-    title: "Captação e avaliação",
-    body: "Registre o custo de aquisição, despesas de preparação (mecânica, estética, funilaria) e calcule automaticamente o custo real do veículo antes de precificá-lo.",
+    badge: "Lucro garantido",
+    title: "Saiba exatamente quanto vai lucrar em cada carro",
+    body: "Anote quanto pagou e quanto gastou preparando o carro. O sistema calcula o custo real pra você nunca mais vender no prejuízo sem saber.",
     destaque: false,
   },
   {
     icon: Users,
-    badge: "CRM",
-    title: "Funil de vendas e leads",
-    body: "Gerencie propostas, simulações de financiamento e trocas com troco. Centralize leads de portais como Webmotors e OLX em um único lugar.",
+    badge: "Mais vendas",
+    title: "Não deixe nenhum cliente interessado escapar",
+    body: "Organize todas as propostas e conversas em um só lugar. Responda rápido, feche mais negócios e conquiste clientes satisfeitos que voltam a comprar.",
     destaque: false,
   },
   {
     icon: Globe,
-    badge: "Vitrine online",
-    title: "Site da loja incluso",
-    body: "Cada loja tem sua vitrine pública em slug.volante7.com.br com estoque, fotos, WhatsApp e formulário de contato. Personalize tema, cores, fontes e logo.",
+    badge: "Vitrine 24 horas",
+    title: "Sua loja aberta na internet, o dia inteiro",
+    body: "Seu site fica pronto automaticamente, com fotos, preços e botão de WhatsApp em cada carro. Seus clientes encontram e falam com você sem sair de casa.",
     destaque: false,
   },
   {
     icon: Wallet,
-    badge: "Financeiro",
-    title: "DRE por veículo",
-    body: "Veja exatamente quanto cada placa gerou de lucro líquido: preço de venda menos custo de compra, preparação, comissões e impostos. Giro de estoque em dias.",
+    badge: "Dinheiro no bolso",
+    title: "Veja o quanto está ganhando de verdade",
+    body: "Descubra o lucro de cada carro vendido sem fazer conta na mão. Sem surpresa no fim do mês — você sabe se está ganhando dinheiro ou não.",
     destaque: false,
   },
   {
     icon: Receipt,
-    badge: "Documentação",
-    title: "Controle documental",
-    body: "Acompanhe transferência de propriedade, IPVA em atraso, multas e status do despachante. Emissão de NF-e de Entrada e Saída integradas.",
+    badge: "Menos dor de cabeça",
+    title: "Documentação sempre em dia, sem susto",
+    body: "Saiba na hora se o carro tem IPVA atrasado, multa ou outra pendência antes de fechar negócio. Menos risco pra você, mais confiança pro seu cliente.",
     destaque: false,
   },
   {
     icon: TrendingUp,
-    badge: "Relatórios",
-    title: "Métricas da operação",
-    body: "Painel com faturamento por período, ticket médio, veículos mais rentáveis, tempo médio em estoque e performance por vendedor.",
+    badge: "Decisões certas",
+    title: "Descubra o que está funcionando na sua loja",
+    body: "Veja quais carros vendem mais rápido, quem são seus melhores vendedores e quanto sua loja faturou. Tudo em números fáceis de entender, sem planilha.",
     destaque: false,
   },
 ];
@@ -91,31 +94,31 @@ const FUNCIONALIDADES = [
 const PASSOS = [
   {
     n: "01",
-    title: "Cadastre a placa",
-    body: "Digite a placa do veículo. O sistema busca instantaneamente todos os dados do DETRAN e sugere o preço FIPE.",
+    title: "Cadastre o carro",
+    body: "Digite só a placa. Os dados aparecem sozinhos na tela — sem trabalho, sem erro de digitação.",
   },
   {
     n: "02",
-    title: "Registre os custos",
-    body: "Informe o valor pago, gastos com preparação e origem (compra, consignação ou troca). O custo real é calculado automaticamente.",
+    title: "Anote o que gastou",
+    body: "Diga quanto pagou pelo carro e quanto gastou preparando. Você já sabe o lucro antes mesmo de vender.",
   },
   {
     n: "03",
-    title: "Publique na vitrine",
-    body: "Com um clique o veículo aparece no site da sua loja com fotos, ficha técnica e botão de WhatsApp.",
+    title: "Coloque na vitrine",
+    body: "Com um clique o carro já aparece no site da sua loja, prontinho pra atrair novos clientes.",
   },
   {
     n: "04",
-    title: "Venda e feche",
-    body: "Registre a proposta, financiamento ou troca. O DRE por placa mostra o lucro assim que a venda é concluída.",
+    title: "Venda e embolse o lucro",
+    body: "Feche o negócio e veja na hora quanto aquele carro deu de lucro. Sem planilha, sem calculadora, sem confusão.",
   },
 ];
 
 const STATS = [
-  { k: "Consulta de placa", v: "Dados DETRAN + FIPE automáticos" },
-  { k: "Vitrine inclusa", v: "Site para cada loja na nuvem" },
-  { k: "Multi-loja", v: "Dados isolados por revenda" },
-  { k: "100% nuvem", v: "Sem instalação, acesse do celular" },
+  { k: "Cadastro em segundos", v: "Só com a placa do carro" },
+  { k: "Site pronto pra vender", v: "Sua loja na internet, sem esforço" },
+  { k: "Tudo no seu controle", v: "Cada loja com seus próprios dados" },
+  { k: "De qualquer lugar", v: "Funciona no computador e no celular" },
 ];
 
 // ─── Página ───────────────────────────────────────────────────────────────────
@@ -134,25 +137,25 @@ export default function HomePage() {
               variant="secondary"
               className="mb-6 border-red-900/40 bg-red-950/50 text-red-400"
             >
-              Plataforma para revendas e concessionárias
+              Feito para revendas de carros que querem vender mais
             </Badge>
 
             <h1 className="text-balance text-4xl font-bold tracking-tight text-white md:text-6xl">
-              Da placa ao contrato,{" "}
+              Venda mais carros,{" "}
               <span className="bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
-                tudo em um lugar.
+                ganhe mais dinheiro.
               </span>
             </h1>
 
             <p className="mt-6 text-balance text-lg text-slate-400 md:text-xl">
-              Volante7 é o sistema de gestão para revendas que automatiza o cadastro de
-              veículos pela placa, controla estoque em Kanban, gerencia leads e ainda
-              cria o site da sua loja — sem precisar de TI.
+              O Volante7 organiza sua loja, cadastra seus carros em segundos e cria o
+              site da sua revenda — pra você fechar mais negócios, vender mais e
+              deixar seus clientes satisfeitos. Sem complicação, sem TI.
             </p>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white" asChild>
-                <Link href="/planos">
+                <Link href="/cadastro">
                   Começar grátis <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -162,7 +165,9 @@ export default function HomePage() {
                 className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
                 asChild
               >
-                <Link href="/t/demo">Ver demonstração</Link>
+                <Link href={DEMO_URL} target="_blank" rel="noopener noreferrer">
+                  Ver loja de exemplo
+                </Link>
               </Button>
             </div>
 
@@ -227,11 +232,12 @@ export default function HomePage() {
           <div className="mx-auto max-w-2xl text-center">
             <Badge variant="secondary" className="mb-4">Funcionalidades</Badge>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Um sistema completo para o ciclo do veículo
+              Tudo que você precisa pra vender mais e ganhar mais dinheiro
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Do cadastro pela placa até o DRE por veículo vendido — sem planilhas,
-              sem papelada, sem perder negócio.
+              Esqueça planilhas, cadernos e papelada espalhada. Aqui você organiza sua
+              loja, atende seus clientes rápido e fecha mais negócios — tudo em um
+              lugar só, fácil de usar.
             </p>
           </div>
 
@@ -242,22 +248,22 @@ export default function HomePage() {
                 <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-red-600 text-white">
                   <Search className="h-5 w-5" />
                 </div>
-                <Badge variant="secondary" className="w-fit text-xs">Automação</Badge>
-                <CardTitle className="text-xl mt-2">Busca de placa inteligente</CardTitle>
+                <Badge variant="secondary" className="w-fit text-xs">Rapidez</Badge>
+                <CardTitle className="text-xl mt-2">Cadastre um carro em segundos, só com a placa</CardTitle>
               </CardHeader>
               <CardContent className="text-muted-foreground">
                 <p>
-                  Digite a placa e o sistema preenche automaticamente marca, modelo, ano,
-                  cor, chassi e situação documental via DETRAN. A tabela FIPE já vem
-                  como sugestão de preço de venda. Cache de 2 meses — consultas
-                  subsequentes são instantâneas.
+                  Digite a placa e pronto: marca, modelo, ano, cor e toda a
+                  documentação aparecem na tela sozinhos, sem você precisar digitar
+                  nada. O preço de venda já vem sugerido, pra você não perder tempo
+                  pesquisando.
                 </p>
                 <ul className="mt-4 space-y-1.5 text-sm">
                   {[
-                    "Dados do DETRAN em menos de 2 segundos",
-                    "Valor FIPE sugerido automaticamente",
-                    "Restrições de roubo, leilão e sinistro",
-                    "Cache compartilhado entre lojas da plataforma",
+                    "Carro cadastrado em menos de 2 segundos",
+                    "Preço de venda sugerido automaticamente",
+                    "Você vê na hora se o carro tem multa, roubo ou sinistro",
+                    "Menos trabalho manual, menos chance de erro",
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-red-600 shrink-0" />
@@ -291,8 +297,12 @@ export default function HomePage() {
           <div className="mx-auto max-w-2xl text-center">
             <Badge variant="secondary" className="mb-4">Como funciona</Badge>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Do cadastro à venda em 4 passos
+              Do carro no pátio ao dinheiro no bolso, em 4 passos simples
             </h2>
+            <p className="mt-3 text-muted-foreground">
+              Sem curso, sem manual chato de ler. Se você sabe usar WhatsApp, sabe
+              usar o Volante7.
+            </p>
           </div>
 
           <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -314,20 +324,21 @@ export default function HomePage() {
             <div>
               <Badge variant="secondary" className="mb-4">Vitrine online</Badge>
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Seu site de loja incluso no plano
+                Sua loja na internet, pronta pra vender por você
               </h2>
               <p className="mt-4 text-muted-foreground">
-                Cada loja cadastrada na plataforma ganha automaticamente um site
-                público em <strong>sualooja.volante7.com.br</strong>. Personalize
-                tema, cores, fontes e logo. Publique ou despublique com um clique.
+                Toda loja cadastrada na plataforma já ganha um site próprio em{" "}
+                <strong>sualooja.volante7.com.br</strong>, sem precisar contratar
+                ninguém. Escolha as cores e a logo da sua marca e publique com um
+                clique.
               </p>
               <ul className="mt-6 space-y-2.5 text-sm">
                 {[
-                  "3 temas visuais prontos: Clássico, Moderno e Minimal",
-                  "Estoque sincronizado em tempo real",
-                  "Formulário de contato com captação de leads",
-                  "Botão de WhatsApp em cada veículo",
-                  "SEO configurável por loja",
+                  "3 temas visuais prontos, bonitos e fáceis de usar",
+                  "Seus carros aparecem no site na hora que você cadastra",
+                  "Formulário de contato pra você não perder nenhum cliente",
+                  "Botão de WhatsApp em cada carro, direto pra você",
+                  "Seu site aparece melhor no Google",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary shrink-0" />
@@ -407,28 +418,22 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* Roadmap */}
+          {/* Suporte e confiabilidade */}
           <Card>
             <CardHeader>
-              <Badge variant="secondary" className="w-fit">Roadmap</Badge>
-              <CardTitle className="mt-2">Evolução da plataforma</CardTitle>
+              <Badge variant="secondary" className="w-fit">Suporte dedicado</Badge>
+              <CardTitle className="mt-2">Você nunca fica sozinho</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               {[
-                { n: "✓", t: "Fundação", d: "Estoque, Kanban, compras, fornecedores, vitrine online", done: true },
-                { n: "✓", t: "Consulta veicular", d: "Busca por placa com dados DETRAN + FIPE automáticos", done: true },
-                { n: "2", t: "Documentos e contratos", d: "Geração de PDF, contratos e assinatura eletrônica (DocuSign)" },
-                { n: "3", t: "Comunicação integrada", d: "E-mail transacional + WhatsApp com fila e retry" },
-                { n: "4", t: "Financeiro avançado", d: "DRE, fluxo de caixa, contas a pagar/receber, NF-e" },
-                { n: "5", t: "CRM e portais de anúncio", d: "Leads do Webmotors e OLX, simulação de financiamento" },
+                { icon: CheckCircle2, t: "Onboarding guiado", d: "Configuramos com você o primeiro veículo e o site da sua loja." },
+                { icon: ShieldCheck, t: "Backups automáticos", d: "Seus dados são replicados continuamente, sem esforço manual." },
+                { icon: TrendingUp, t: "Evolução constante", d: "Novas funcionalidades chegam sem custo adicional para o seu plano." },
+                { icon: Users, t: "Atendimento humano", d: "Fale diretamente com nossa equipe por e-mail ou WhatsApp." },
               ].map((f) => (
                 <div key={f.t} className="flex items-start gap-3">
-                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                    f.done
-                      ? "bg-green-600 text-white"
-                      : "bg-primary text-primary-foreground"
-                  }`}>
-                    {f.n}
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <f.icon className="h-4 w-4" />
                   </div>
                   <div>
                     <div className="font-medium">{f.t}</div>
@@ -453,15 +458,15 @@ export default function HomePage() {
             className="mx-auto mb-8 [filter:brightness(0)_invert(1)]"
           />
           <h2 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
-            Pronto para digitalizar sua revenda?
+            Pronto para vender mais e ganhar mais dinheiro?
           </h2>
           <p className="mt-4 text-lg text-slate-400">
-            Crie sua conta, cadastre seus veículos e publique a vitrine da sua loja
-            hoje mesmo.
+            Crie sua conta agora, cadastre seu primeiro carro e comece a fechar mais
+            negócios hoje mesmo. É grátis pra começar.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white" asChild>
-              <Link href="/planos">
+              <Link href="/cadastro">
                 Começar grátis <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
@@ -471,7 +476,9 @@ export default function HomePage() {
               className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
               asChild
             >
-              <Link href="/t/demo">Ver demo →</Link>
+              <Link href={DEMO_URL} target="_blank" rel="noopener noreferrer">
+                Ver loja de exemplo →
+              </Link>
             </Button>
           </div>
         </Wrap>

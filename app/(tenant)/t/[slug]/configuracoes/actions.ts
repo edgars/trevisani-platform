@@ -3,15 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const SLUGS_RESERVADOS = new Set([
-  "www", "app", "admin", "api", "mail", "smtp", "dashboard",
-  "login", "logout", "site", "demo", "suporte", "support",
-  "blog", "docs", "status", "static", "cdn", "assets",
-]);
-
 import { prisma } from "@/lib/db/client";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
+import { SLUGS_RESERVADOS } from "@/lib/tenant/slugs";
 import {
   GERAIS_BUCKET,
   getPublicUrl,

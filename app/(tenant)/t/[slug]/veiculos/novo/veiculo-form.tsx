@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Car,
   CheckCircle2,
@@ -123,6 +124,7 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
   const isEdicao = !!veiculo;
   const router   = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [limiteAtingido, setLimiteAtingido] = useState<string | null>(null);
 
   // ─ Estado de lookup de placa (apenas no modo criar) ─
   const [lookupStatus, setLookupStatus] = useState<LookupStatus>(
@@ -294,13 +296,24 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
     formData.set("proprietarioNome", proprietarioNome);
     formData.set("proprietarioDoc",  proprietarioDoc);
 
+    setLimiteAtingido(null);
+
     startTransition(async () => {
       try {
-        if (isEdicao) {
-          await atualizarVeiculoAction(slug, veiculo!.id, null, formData);
-        } else {
-          await criarVeiculoAction(slug, null, formData);
+        const result = isEdicao
+          ? await atualizarVeiculoAction(slug, veiculo!.id, null, formData)
+          : await criarVeiculoAction(slug, null, formData);
+
+        if (result?.error) {
+          if ("upgradeRequired" in result && result.upgradeRequired) {
+            setLimiteAtingido(result.error);
+          } else {
+            toast.error(result.error);
+          }
+          return;
         }
+
+        // Sucesso: a action redireciona (lança NEXT_REDIRECT) antes de chegar aqui.
         toast.success(isEdicao ? "Veículo atualizado!" : "Veículo cadastrado!");
         router.push(`/t/${slug}/veiculos`);
       } catch (err: unknown) {
@@ -373,6 +386,23 @@ export function VeiculoForm({ slug, fornecedores, veiculo }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
+      {/* ── Banner: limite de veículos do plano atingido ────────────── */}
+      {limiteAtingido && (
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4">
+          <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-destructive">{limiteAtingido}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Enviamos um e-mail com as instruções para migrar de plano — o pagamento ainda é
+              feito manualmente, então nossa equipe entra em contato para ativar o upgrade.
+            </p>
+            <Button asChild size="sm" className="mt-3">
+              <Link href={`/t/${slug}/configuracoes/plano`}>Ver planos e continuar</Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* ── Banner: placa encontrada ─────────────────────────────────── */}
       {lookupStatus === "found" && dadosApi && (

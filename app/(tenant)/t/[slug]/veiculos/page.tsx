@@ -129,7 +129,7 @@ export default async function VeiculosPage({
               )}
             >
               <SquareKanban className="h-3.5 w-3.5" />
-              Kanban
+              Painel
             </Link>
             <Link
               href={`/t/${slug}/veiculos${baseQuery({ view: "lista", status: filters.status })}`}

@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getTenantPublicUrl } from "@/lib/tenant/public-url";
+
+const DEMO_URL = getTenantPublicUrl("demo");
 
 /** Wrapper estreito usado em todas as seções da landing */
 export function Wrap({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -47,7 +50,7 @@ export default function MarketingLayout({
               <Link href="/login">Entrar</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link href="/planos">Começar grátis</Link>
+              <Link href="/cadastro">Começar grátis</Link>
             </Button>
           </div>
         </Wrap>
@@ -77,15 +80,19 @@ export default function MarketingLayout({
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/#funcionalidades" className="hover:text-foreground transition-colors">Funcionalidades</Link></li>
                 <li><Link href="/planos" className="hover:text-foreground transition-colors">Planos e preços</Link></li>
-                <li><Link href="/t/demo" className="hover:text-foreground transition-colors">Ver demonstração</Link></li>
+                <li>
+                  <Link href={DEMO_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                    Ver loja de exemplo
+                  </Link>
+                </li>
               </ul>
             </div>
 
             <div>
-              <p className="mb-3 text-sm font-semibold">Sistema</p>
+              <p className="mb-3 text-sm font-semibold">Sua loja</p>
               <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/cadastro" className="hover:text-foreground transition-colors">Criar conta</Link></li>
                 <li><Link href="/login" className="hover:text-foreground transition-colors">Acessar minha loja</Link></li>
-                <li><Link href="/admin" className="hover:text-foreground transition-colors">Administração</Link></li>
               </ul>
             </div>
 

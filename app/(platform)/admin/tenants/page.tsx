@@ -71,7 +71,14 @@ export default async function TenantsPage() {
                     <tr key={t.id} className="hover:bg-muted/30">
                       <td className="px-6 py-3 font-medium">{t.nome}</td>
                       <td className="px-6 py-3 font-mono text-xs">{t.slug}</td>
-                      <td className="px-6 py-3">{t.plano?.nome ?? "—"}</td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {t.plano?.nome ?? "—"}
+                          {t.upgradeSolicitadoEm && (
+                            <Badge variant="warning" className="text-[10px]">Upgrade pendente</Badge>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-3">{t._count.usuarios}</td>
                       <td className="px-6 py-3">{t._count.veiculos}</td>
                       <td className="px-6 py-3 text-xs tabular-nums">{formatBytes(t.storageUsadoBytes)}</td>

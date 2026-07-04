@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { atualizarStorageTenant } from "@/lib/tracking/eventos";
+import { verificarLimite } from "@/lib/plano/limites";
 
 export const FOTOS_BUCKET  = "veiculos-fotos";
 export const DOCS_BUCKET   = "veiculos-docs";
@@ -71,6 +72,12 @@ export async function uploadFoto(
   contentType: string,
   ext: string,
 ): Promise<string> {
+  const limiteStorage = await verificarLimite(tenantId, "storage");
+  if (!limiteStorage.permitido) {
+    throw new Error(
+      `Limite de armazenamento do plano ${limiteStorage.planoNome} atingido. Faça upgrade para continuar enviando arquivos.`,
+    );
+  }
   const path = `${tenantId}/${veiculoId}/${Date.now()}.${ext}`;
   await uploadArquivo(FOTOS_BUCKET, path, buffer, contentType);
   atualizarStorageTenant(tenantId, buffer.length);

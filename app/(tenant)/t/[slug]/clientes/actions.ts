@@ -11,6 +11,7 @@ import { validarCpf, limparCpf } from "@/lib/utils/cpf";
 import { validarCnpj, consultarCnpj, type CnpjDados } from "@/lib/integrations/cnpj";
 import { GERAIS_BUCKET, getPublicUrl, uploadArquivo } from "@/lib/storage/supabase";
 import { registrarEvento, atualizarStorageTenant } from "@/lib/tracking/eventos";
+import { verificarLimite } from "@/lib/plano/limites";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -86,9 +87,17 @@ export async function lookupClienteAction(
     });
     if (existente) return { type: "found", clienteId: existente.id };
 
+    // Check CNPJ monthly limit before calling API
+    const limiteCnpj = await verificarLimite(tenantId, "cnpjs");
+    if (!limiteCnpj.permitido) {
+      return {
+        type: "error",
+        message: `Limite de ${limiteCnpj.limite} consultas de CNPJ/mês do plano ${limiteCnpj.planoNome} atingido. Faça upgrade para continuar.`,
+      };
+    }
+
     const dados = await consultarCnpj(limpo);
     if (!dados) return { type: "cnpj_nao_encontrado", cnpj: limpo };
-    // Track CNPJ lookup (fire-and-forget)
     registrarEvento(tenantId, "consulta_cnpj", { cnpj: limpo });
     return { type: "novo_pj", cnpj: limpo, dados };
   }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Globe, Settings2, Users } from "lucide-react";
+import { Building2, CreditCard, Globe, Settings2, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,10 +111,6 @@ export default async function ConfiguracoesPage({
                 label="Seu papel"
                 value={session.user.papeis.join(", ") || "—"}
               />
-              <Separator />
-              <p className="text-xs text-muted-foreground">
-                Gerenciamento de usuários e permissões em breve.
-              </p>
             </CardContent>
           </Card>
 
@@ -130,8 +126,29 @@ export default async function ConfiguracoesPage({
               <Stat label="Configuradas" value={totalIntegracoes} />
               <Separator />
               <p className="text-xs text-muted-foreground">
-                DocuSign, Resend e WhatsApp disponíveis nas Fases 2 e 3.
+                Assinatura eletrônica e notificações por WhatsApp disponíveis nos planos pagos.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Plano */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">Plano</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p className="text-muted-foreground">
+                Veja seu consumo de veículos e usuários e solicite upgrade quando precisar.
+              </p>
+              <Link
+                href={`/t/${slug}/configuracoes/plano`}
+                className="mt-3 inline-flex items-center text-xs font-medium text-primary hover:underline"
+              >
+                Ver plano e upgrade →
+              </Link>
             </CardContent>
           </Card>
 

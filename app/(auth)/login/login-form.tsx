@@ -6,9 +6,12 @@ import Link from "next/link";
 import { signIn, getSession } from "next-auth/react";
 import { AlertCircle, Lock, Mail } from "lucide-react";
 
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { reenviarConfirmacaoAction } from "@/app/(auth)/cadastro/actions";
 
 // ─── Car SVG ──────────────────────────────────────────────────────────────────
 
@@ -208,10 +211,23 @@ export function LoginForm({ erro }: LoginFormProps) {
   const [error, setError] = useState<string | null>(
     erro ? "Não foi possível autenticar. Verifique suas credenciais." : null,
   );
+  const [emailNaoConfirmado, setEmailNaoConfirmado] = useState<string | null>(null);
+  const [reenviando, setReenviando] = useState(false);
+
+  async function handleReenviar(email: string) {
+    setReenviando(true);
+    try {
+      await reenviarConfirmacaoAction(email);
+      toast.success("E-mail de confirmação reenviado. Confira sua caixa de entrada.");
+    } finally {
+      setReenviando(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setEmailNaoConfirmado(null);
     setLoading(true);
 
     const form = new FormData(e.currentTarget);
@@ -226,7 +242,11 @@ export function LoginForm({ erro }: LoginFormProps) {
 
     if (res?.error) {
       setLoading(false);
-      setError("E-mail ou senha incorretos. Verifique suas credenciais.");
+      if (res.code === "email_nao_confirmado") {
+        setEmailNaoConfirmado(email);
+      } else {
+        setError("E-mail ou senha incorretos. Verifique suas credenciais.");
+      }
       return;
     }
 
@@ -249,6 +269,23 @@ export function LoginForm({ erro }: LoginFormProps) {
           <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
+          </div>
+        )}
+
+        {emailNaoConfirmado && (
+          <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-400">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              Confirme seu e-mail antes de entrar. Enviamos um link para {emailNaoConfirmado}.
+            </div>
+            <button
+              type="button"
+              disabled={reenviando}
+              onClick={() => handleReenviar(emailNaoConfirmado)}
+              className="font-medium underline underline-offset-2 disabled:opacity-60"
+            >
+              {reenviando ? "Reenviando…" : "Reenviar e-mail de confirmação"}
+            </button>
           </div>
         )}
 
