@@ -151,7 +151,7 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr }:
             <div className="flex flex-col items-center gap-3 py-6 text-center">
               <WifiOff className="h-10 w-10 text-muted-foreground/40" />
               <p className="text-muted-foreground text-sm">
-                Nenhum número conectado. Clique em "Conectar" para gerar o QR Code.
+                Nenhum número conectado. Clique em &ldquo;Conectar&rdquo; para gerar o QR Code.
               </p>
             </div>
           )}
