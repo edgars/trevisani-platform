@@ -82,7 +82,7 @@ export function WppChat({ slug, conversaId, initialMensagens }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] min-h-[400px]">
+    <div className="flex h-[calc(100vh-12rem)] min-h-[460px] flex-col bg-[#efeae2]">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto space-y-2 p-4">
         {mensagens.length === 0 && (
@@ -92,10 +92,10 @@ export function WppChat({ slug, conversaId, initialMensagens }: Props) {
         )}
         {mensagens.map((m) => (
           <div key={m.id} className={`flex ${m.fromMe ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm shadow-sm ${
+            <div className={`max-w-[78%] rounded-lg px-3 py-2 text-sm shadow-sm ${
               m.fromMe
-                ? "bg-emerald-500 text-white rounded-br-sm"
-                : "bg-card border rounded-bl-sm"
+                ? "bg-[#d9fdd3] text-foreground rounded-br-sm"
+                : "bg-white text-foreground rounded-bl-sm"
             }`}>
               {m.tipo === "text" ? (
                 <p className="whitespace-pre-wrap break-words">{m.corpo}</p>
@@ -103,10 +103,10 @@ export function WppChat({ slug, conversaId, initialMensagens }: Props) {
                 <p className="italic text-xs opacity-70">[{m.tipo}]</p>
               )}
               <div className={`flex items-center gap-1 mt-0.5 justify-end text-[10px] ${
-                m.fromMe ? "text-emerald-100" : "text-muted-foreground"
+                m.fromMe ? "text-emerald-700/80" : "text-muted-foreground"
               }`}>
                 {formatHora(m.timestamp)}
-                {m.fromMe && <CheckCheck className={`h-3 w-3 ${m.lida ? "text-blue-200" : "text-emerald-200"}`} />}
+                {m.fromMe && <CheckCheck className={`h-3 w-3 ${m.lida ? "text-sky-500" : "text-emerald-700/70"}`} />}
               </div>
             </div>
           </div>
@@ -115,24 +115,26 @@ export function WppChat({ slug, conversaId, initialMensagens }: Props) {
       </div>
 
       {/* Input area */}
-      <div className="border-t p-3 flex items-end gap-2 bg-background">
+      <div className="sticky bottom-0 border-t bg-[#f0f2f5] p-3">
+        <div className="flex items-end gap-2 rounded-xl border bg-background p-2 shadow-sm">
         <Textarea
           placeholder="Digite uma mensagem... (Enter para enviar)"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={2}
-          className="resize-none flex-1"
+          className="resize-none flex-1 border-0 shadow-none focus-visible:ring-0"
           disabled={sending}
         />
         <Button
           onClick={handleSend}
           disabled={sending || !texto.trim()}
           size="icon"
-          className="h-10 w-10 shrink-0"
+          className="h-10 w-10 shrink-0 rounded-full bg-emerald-600 hover:bg-emerald-700"
         >
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
+        </div>
       </div>
     </div>
   );

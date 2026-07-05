@@ -58,6 +58,48 @@ interface QrCodeData {
   };
 }
 
+function extrairMensagens(raw: unknown): MessageData[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as MessageData[];
+
+  if (typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (obj.key) return [obj as unknown as MessageData];
+    if (Array.isArray(obj.messages)) return obj.messages as MessageData[];
+    if (obj.data && Array.isArray(obj.data)) return obj.data as MessageData[];
+    if (obj.message && typeof obj.message === "object" && (obj.message as Record<string, unknown>).key) {
+      return [obj.message as unknown as MessageData];
+    }
+  }
+
+  return [];
+}
+
+function extrairContatos(raw: unknown): { id: string; pushName?: string }[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as { id: string; pushName?: string }[];
+
+  if (typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.contacts)) return obj.contacts as { id: string; pushName?: string }[];
+    if (Array.isArray(obj.data)) return obj.data as { id: string; pushName?: string }[];
+    if (typeof obj.id === "string") return [obj as { id: string; pushName?: string }];
+  }
+
+  return [];
+}
+
+function extrairConnectionData(raw: unknown): ConnectionData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.state === "string") return obj as unknown as ConnectionData;
+  if (obj.instance && typeof obj.instance === "object") {
+    const instance = obj.instance as Record<string, unknown>;
+    if (typeof instance.state === "string") return instance as unknown as ConnectionData;
+  }
+  return null;
+}
+
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
 export async function POST(
@@ -87,25 +129,37 @@ export async function POST(
 
   try {
     switch (event) {
-      case "MESSAGES_UPSERT":
-        await handleMessagesUpsert(integracao.id, integracao.tenantId, integracao.criarLeadAuto, data as unknown as MessageData);
+      case "MESSAGES_UPSERT": {
+        const mensagens = extrairMensagens(data);
+        for (const msg of mensagens) {
+          await handleMessagesUpsert(integracao.id, integracao.tenantId, integracao.criarLeadAuto, msg);
+        }
         break;
+      }
 
-      case "MESSAGES_UPDATE":
-        await handleMessagesUpdate(integracao.id, data as unknown as MessageData);
+      case "MESSAGES_UPDATE": {
+        const mensagens = extrairMensagens(data);
+        for (const msg of mensagens) {
+          await handleMessagesUpdate(integracao.id, msg);
+        }
         break;
+      }
 
-      case "CONNECTION_UPDATE":
-        await handleConnectionUpdate(integracao.id, data as unknown as ConnectionData);
+      case "CONNECTION_UPDATE": {
+        const conn = extrairConnectionData(data);
+        if (conn) await handleConnectionUpdate(integracao.id, conn);
         break;
+      }
 
       case "QRCODE_UPDATED":
         await handleQrCodeUpdated(integracao.id, data as unknown as QrCodeData);
         break;
 
-      case "CONTACTS_UPSERT":
-        await handleContactsUpsert(integracao.id, data as unknown as { id: string; pushName?: string }[]);
+      case "CONTACTS_UPSERT": {
+        const contatos = extrairContatos(data);
+        await handleContactsUpsert(integracao.id, contatos);
         break;
+      }
 
       default:
         // Unknown event — ignore silently

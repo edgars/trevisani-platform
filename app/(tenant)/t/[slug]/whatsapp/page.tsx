@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MessageCircle, Settings, User, WifiOff } from "lucide-react";
+import { MessageCircle, Search, Settings, User, WifiOff } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
 import { formatarNumero, jidParaNumero } from "@/lib/integrations/whatsapp/evolution";
+import { sincronizarInboxDaInstancia } from "@/lib/integrations/whatsapp/sync";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "WhatsApp — Inbox" };
@@ -34,6 +35,19 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
     where:   { tenantId: tenant.id },
     select:  { id: true, status: true, numeroConectado: true },
   });
+
+  // Fallback de bootstrap: se a instância já está conectada mas o inbox local
+  // ainda está vazio (ex.: webhook indisponível em algum período), importa os
+  // chats atuais da Evolution API para não deixar a tela "0 conversa(s)".
+  if (integracao?.status === "CONECTADO") {
+    const total = await prisma.conversaWpp.count({ where: { integracaoId: integracao.id } });
+    if (total === 0) {
+      await sincronizarInboxDaInstancia({
+        integracaoId: integracao.id,
+        instanceName: `loja-${tenant.id}`,
+      }).catch(() => {});
+    }
+  }
 
   const conversas = integracao
     ? await prisma.conversaWpp.findMany({
@@ -83,11 +97,9 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
             <MessageCircle className="h-6 w-6" /> WhatsApp
-            {totalNaoLidas > 0 && (
-              <Badge variant="destructive" className="text-xs">{totalNaoLidas}</Badge>
-            )}
+            {totalNaoLidas > 0 && <Badge variant="destructive" className="text-xs">{totalNaoLidas}</Badge>}
           </h1>
           <p className="text-sm text-muted-foreground">
             {formatarNumero(integracao.numeroConectado!)} · {conversas.length} conversa(s)
@@ -100,60 +112,71 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
         </Button>
       </div>
 
-      {conversas.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <MessageCircle className="h-10 w-10 text-muted-foreground/30" />
-            <p className="text-muted-foreground text-sm">
-              Nenhuma conversa ainda. As mensagens recebidas aparecerão aqui.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="rounded-xl border divide-y overflow-hidden bg-card">
-          {conversas.map(c => {
-            const ultimaMsg = c.mensagens[0];
-            const nome  = c.cliente?.nome ?? c.nomeContato ?? formatarNumero(jidParaNumero(c.remoteJid));
-            const temNaoLidas = c.totalNaoLidas > 0;
-            return (
-              <Link
-                key={c.id}
-                href={`/t/${slug}/whatsapp/${c.id}`}
-                className="flex items-center gap-4 px-4 py-3 hover:bg-muted/40 transition-colors"
-              >
-                {/* Avatar */}
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase">
-                  {nome.slice(0, 2)}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={`text-sm font-medium truncate ${temNaoLidas ? "font-semibold" : ""}`}>
-                      {c.cliente && <User className="inline h-3.5 w-3.5 mr-1 text-primary" />}
-                      {nome}
-                    </p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[11px] text-muted-foreground">{tempoRelativo(c.ultimaMensagem)}</span>
-                      {temNaoLidas && (
-                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold text-white">
-                          {c.totalNaoLidas}
-                        </span>
-                      )}
+      <div className="overflow-hidden rounded-xl border bg-card lg:grid lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="border-r bg-[#f7f8fa]">
+          <div className="border-b bg-[#f0f2f5] p-3">
+            <div className="rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground">
+              <Search className="mr-2 inline h-4 w-4" />
+              Buscar ou iniciar conversa
+            </div>
+          </div>
+          <div className="max-h-[calc(100vh-16rem)] overflow-y-auto divide-y">
+            {conversas.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 px-6 py-16 text-center text-sm text-muted-foreground">
+                <MessageCircle className="h-8 w-8 text-muted-foreground/40" />
+                Nenhuma conversa ainda.
+              </div>
+            ) : (
+              conversas.map(c => {
+                const ultimaMsg = c.mensagens[0];
+                const nome = c.cliente?.nome ?? c.nomeContato ?? formatarNumero(jidParaNumero(c.remoteJid));
+                const temNaoLidas = c.totalNaoLidas > 0;
+                return (
+                  <Link
+                    key={c.id}
+                    href={`/t/${slug}/whatsapp/${c.id}`}
+                    className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-[#ebedf0]"
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase">
+                      {nome.slice(0, 2)}
                     </div>
-                  </div>
-                  {ultimaMsg && (
-                    <p className={`text-xs truncate mt-0.5 ${temNaoLidas ? "text-foreground" : "text-muted-foreground"}`}>
-                      {ultimaMsg.fromMe ? "Você: " : ""}
-                      {ultimaMsg.tipo !== "text" ? `[${ultimaMsg.tipo}]` : ultimaMsg.corpo}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`truncate text-sm ${temNaoLidas ? "font-semibold" : "font-medium"}`}>
+                          {c.cliente && <User className="mr-1 inline h-3.5 w-3.5 text-primary" />}
+                          {nome}
+                        </p>
+                        <span className="shrink-0 text-[11px] text-muted-foreground">{tempoRelativo(c.ultimaMensagem)}</span>
+                      </div>
+                      <div className="mt-0.5 flex items-center justify-between gap-2">
+                        <p className={`truncate text-xs ${temNaoLidas ? "text-foreground" : "text-muted-foreground"}`}>
+                          {ultimaMsg?.fromMe ? "Você: " : ""}
+                          {ultimaMsg ? (ultimaMsg.tipo !== "text" ? `[${ultimaMsg.tipo}]` : ultimaMsg.corpo) : "Sem mensagens"}
+                        </p>
+                        {temNaoLidas && (
+                          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold text-white">
+                            {c.totalNaoLidas}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </aside>
+
+        <section className="hidden h-[calc(100vh-16rem)] items-center justify-center bg-[#efeae2] text-center lg:flex">
+          <div className="max-w-sm px-6">
+            <MessageCircle className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+            <p className="text-sm font-medium">Selecione uma conversa para começar</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Sua lista fica fixa à esquerda, como no WhatsApp Web.
+            </p>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

@@ -20,6 +20,24 @@ export interface EvolutionInstance {
   number?: string;
 }
 
+export interface EvolutionChat {
+  remoteJid: string;
+  pushName?: string | null;
+  updatedAt?: string;
+  unreadCount?: number | null;
+  lastMessage?: {
+    messageType?: string;
+    messageTimestamp?: number;
+    key?: { id?: string; fromMe?: boolean; remoteJid?: string };
+    message?: {
+      conversation?: string;
+      extendedTextMessage?: { text?: string };
+      imageMessage?: { caption?: string };
+      documentMessage?: { title?: string };
+    };
+  };
+}
+
 export interface QrCodeData {
   qrcode: string;     // base64 PNG  (data:image/png;base64,...)
   pairingCode?: string;
@@ -256,6 +274,31 @@ export async function marcarComoLido(
       })),
     }),
   }).catch(() => {}); // silencia — não crítico
+}
+
+/** Lista chats já existentes na instância (fallback para sincronizar inbox). */
+export async function listarChats(instanceName: string, take = 100): Promise<EvolutionChat[]> {
+  try {
+    const payload = await evFetch<unknown>(`/chat/findChats/${instanceName}`, {
+      method: "POST",
+      body: JSON.stringify({ take, skip: 0 }),
+    });
+
+    if (Array.isArray(payload)) return payload as EvolutionChat[];
+
+    if (payload && typeof payload === "object") {
+      const obj = payload as Record<string, unknown>;
+      if (Array.isArray(obj.chats)) return obj.chats as EvolutionChat[];
+      if (obj.chats && typeof obj.chats === "object") {
+        const chatsObj = obj.chats as Record<string, unknown>;
+        if (Array.isArray(chatsObj.records)) return chatsObj.records as EvolutionChat[];
+      }
+      if (Array.isArray(obj.data)) return obj.data as EvolutionChat[];
+    }
+  } catch {
+    // best-effort
+  }
+  return [];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

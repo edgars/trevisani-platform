@@ -1,0 +1,101 @@
+import { prisma } from "@/lib/db/client";
+import { listarChats, type EvolutionChat } from "./evolution";
+
+function extrairCorpo(chat: EvolutionChat): string | null {
+  const m = chat.lastMessage?.message;
+  if (!m) return null;
+  return (
+    m.conversation ??
+    m.extendedTextMessage?.text ??
+    m.imageMessage?.caption ??
+    m.documentMessage?.title ??
+    null
+  );
+}
+
+function normalizarTipo(tipo?: string): string {
+  if (!tipo) return "text";
+  if (tipo === "conversation") return "text";
+  if (tipo.toLowerCase().includes("image")) return "image";
+  if (tipo.toLowerCase().includes("audio")) return "audio";
+  if (tipo.toLowerCase().includes("document")) return "document";
+  if (tipo.toLowerCase().includes("sticker")) return "sticker";
+  return "text";
+}
+
+/**
+ * Sincroniza conversas existentes da Evolution API para o inbox local.
+ * Útil para "bootstrap" quando o webhook ficou indisponível por um período.
+ */
+export async function sincronizarInboxDaInstancia(params: {
+  integracaoId: string;
+  instanceName: string;
+}): Promise<{ conversasCriadas: number; mensagensCriadas: number }> {
+  const { integracaoId, instanceName } = params;
+  const chats = await listarChats(instanceName, 120);
+
+  let conversasCriadas = 0;
+  let mensagensCriadas = 0;
+
+  for (const chat of chats) {
+    const remoteJid = chat.remoteJid;
+    if (!remoteJid) continue;
+    if (remoteJid === "status@broadcast") continue;
+    if (remoteJid.endsWith("@g.us")) continue;
+
+    const timestampSec = chat.lastMessage?.messageTimestamp;
+    const ultimaMensagem = timestampSec
+      ? new Date(timestampSec * 1000)
+      : chat.updatedAt
+        ? new Date(chat.updatedAt)
+        : new Date();
+
+    const existed = await prisma.conversaWpp.findUnique({
+      where: { integracaoId_remoteJid: { integracaoId, remoteJid } },
+      select: { id: true },
+    });
+
+    const conversa = await prisma.conversaWpp.upsert({
+      where: { integracaoId_remoteJid: { integracaoId, remoteJid } },
+      update: {
+        nomeContato: chat.pushName ?? undefined,
+        totalNaoLidas: typeof chat.unreadCount === "number" ? Math.max(chat.unreadCount, 0) : undefined,
+        ultimaMensagem,
+      },
+      create: {
+        integracaoId,
+        remoteJid,
+        nomeContato: chat.pushName ?? null,
+        totalNaoLidas: typeof chat.unreadCount === "number" ? Math.max(chat.unreadCount, 0) : 0,
+        ultimaMensagem,
+      },
+      select: { id: true },
+    });
+    if (!existed) conversasCriadas += 1;
+
+    const key = chat.lastMessage?.key;
+    if (!key?.id) continue;
+
+    const msgExiste = await prisma.mensagemWpp.findUnique({
+      where: { conversaId_messageId: { conversaId: conversa.id, messageId: key.id } },
+      select: { id: true },
+    });
+    if (msgExiste) continue;
+
+    await prisma.mensagemWpp.create({
+      data: {
+        conversaId: conversa.id,
+        messageId: key.id,
+        fromMe: !!key.fromMe,
+        tipo: normalizarTipo(chat.lastMessage?.messageType),
+        corpo: extrairCorpo(chat),
+        timestamp: ultimaMensagem,
+        lida: !!key.fromMe || (typeof chat.unreadCount === "number" ? chat.unreadCount === 0 : false),
+      },
+    });
+    mensagensCriadas += 1;
+  }
+
+  return { conversasCriadas, mensagensCriadas };
+}
+
