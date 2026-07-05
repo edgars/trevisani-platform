@@ -1,4 +1,8 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getTenantPublicUrl } from "@/lib/tenant/public-url";
 
@@ -13,17 +17,25 @@ export function Wrap({ children, className = "" }: { children: React.ReactNode; 
   );
 }
 
+const NAV_LINKS = [
+  { href: "/#funcionalidades", label: "Funcionalidades" },
+  { href: "/#como-funciona",   label: "Como funciona" },
+  { href: "/planos",           label: "Planos" },
+];
+
 export default function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
-        <Wrap className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
+        <Wrap className="flex h-16 items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-3 shrink-0" onClick={() => setMobileOpen(false)}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-text.svg"
@@ -33,27 +45,61 @@ export default function MarketingLayout({
             />
           </Link>
 
+          {/* Desktop nav */}
           <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
-            <Link href="/#funcionalidades" className="transition-colors hover:text-foreground">
-              Funcionalidades
-            </Link>
-            <Link href="/#como-funciona" className="transition-colors hover:text-foreground">
-              Como funciona
-            </Link>
-            <Link href="/planos" className="transition-colors hover:text-foreground">
-              Planos
-            </Link>
+            {NAV_LINKS.map(l => (
+              <Link key={l.href} href={l.href} className="transition-colors hover:text-foreground">
+                {l.label}
+              </Link>
+            ))}
           </nav>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
+            {/* Desktop CTA */}
+            <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
               <Link href="/login">Entrar</Link>
             </Button>
-            <Button size="sm" asChild>
+            <Button size="sm" asChild className="hidden sm:inline-flex">
               <Link href="/cadastro">Começar grátis</Link>
             </Button>
+            {/* Mobile: Entrar only + hamburger */}
+            <Button variant="ghost" size="sm" asChild className="sm:hidden">
+              <Link href="/login">Entrar</Link>
+            </Button>
+            <button
+              onClick={() => setMobileOpen(v => !v)}
+              className="md:hidden rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+              aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </Wrap>
+
+        {/* Mobile dropdown */}
+        {mobileOpen && (
+          <div className="border-t bg-background md:hidden">
+            <Wrap className="flex flex-col gap-1 py-4">
+              {NAV_LINKS.map(l => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  {l.label}
+                </Link>
+              ))}
+              <div className="mt-2 pt-2 border-t">
+                <Button asChild className="w-full">
+                  <Link href="/cadastro" onClick={() => setMobileOpen(false)}>
+                    Começar grátis
+                  </Link>
+                </Button>
+              </div>
+            </Wrap>
+          </div>
+        )}
       </header>
 
       <main className="flex-1">{children}</main>

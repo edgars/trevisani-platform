@@ -31,10 +31,11 @@ export function VeiculosKanban({
   className?: string;
 }) {
   const router = useRouter();
-  // Estado otimista: reflete o drag imediatamente; o server action confirma.
   const [veiculos, setVeiculos] = React.useState(initial);
   const [dragId, setDragId] = React.useState<string | null>(null);
   const [overStage, setOverStage] = React.useState<StageVeiculo | null>(null);
+  // Mobile: which stage tab is active
+  const [activeStage, setActiveStage] = React.useState<StageVeiculo>(STAGE_ORDER[0]);
 
   React.useEffect(() => setVeiculos(initial), [initial]);
 
@@ -62,133 +63,172 @@ export function VeiculosKanban({
     });
   }
 
-  return (
-    <div className={cn("flex gap-3 overflow-x-auto pb-2", className)}>
-      {STAGE_ORDER.map((stage) => {
-        const cfg = STAGE_CONFIG[stage];
-        const items = veiculos.filter((v) => v.status === stage);
-        return (
-          <div
-            key={stage}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setOverStage(stage);
-            }}
-            onDragLeave={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                setOverStage((s) => (s === stage ? null : s));
-              }
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              handleDrop(stage);
-            }}
-            className={cn(
-              "flex h-full w-[272px] shrink-0 flex-col rounded-xl border bg-muted/40 transition-colors",
-              overStage === stage && dragId && "border-primary/40 bg-accent",
-            )}
-          >
-            {/* Header da coluna */}
-            <div className="flex shrink-0 items-center gap-2 px-3 py-2.5">
-              <span className={cn("h-2 w-2 shrink-0 rounded-full", cfg.dot)} />
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {cfg.label}
-              </p>
-              <span className="ml-auto rounded-full bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {items.length}
-              </span>
-            </div>
+  // Shared column renderer
+  function renderColumn(stage: StageVeiculo) {
+    const cfg = STAGE_CONFIG[stage];
+    const items = veiculos.filter((v) => v.status === stage);
+    return (
+      <div
+        key={stage}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOverStage(stage);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setOverStage((s) => (s === stage ? null : s));
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleDrop(stage);
+        }}
+        className={cn(
+          "flex h-full flex-col rounded-xl border bg-muted/40 transition-colors",
+          "w-full md:w-[272px] md:shrink-0",
+          overStage === stage && dragId && "border-primary/40 bg-accent",
+        )}
+      >
+        {/* Header da coluna */}
+        <div className="flex shrink-0 items-center gap-2 px-3 py-2.5">
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", cfg.dot)} />
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {cfg.label}
+          </p>
+          <span className="ml-auto rounded-full bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {items.length}
+          </span>
+        </div>
 
-            {/* Cards — scrollável individualmente por coluna */}
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
-              {items.length === 0 && (
-                <div className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-                  Arraste um veículo para cá
-                </div>
-              )}
-              {items.map((v) => (
-                <div
-                  key={v.id}
-                  draggable
-                  onDragStart={(e) => {
-                    setDragId(v.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onDragEnd={() => {
-                    setDragId(null);
-                    setOverStage(null);
-                  }}
-                  onClick={() => router.push(`/t/${slug}/veiculos/${v.id}/editar`)}
-                  className={cn(
-                    "group cursor-pointer rounded-xl border bg-background p-2.5 shadow-card transition-all hover:shadow-card-hover",
-                    dragId === v.id && "opacity-50",
-                  )}
-                >
-                  <div className="flex items-start gap-2.5">
-                    {/* Miniatura (foto de destaque) */}
-                    <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {v.thumbUrl ? (
-                        <Image
-                          src={v.thumbUrl}
-                          alt={`${v.marca} ${v.modelo}`}
-                          fill
-                          sizes="64px"
-                          className="object-cover"
-                          draggable={false}
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                          <Car className="h-5 w-5" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium leading-tight">
-                        {v.marca} {v.modelo}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {v.versao ?? v.cor ?? "—"} · {v.anoFabricacao}/{v.anoModelo}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold">
-                        {formatCentavos(v.precoVendaCentavos)}
-                      </p>
-                    </div>
-                    <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    {v.placa && (
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                        {v.placa}
-                      </span>
-                    )}
-                    {(() => {
-                      const dias = diasNoEstoque(v.dataChegada);
-                      if (dias === null) return null;
-                      const cor =
-                        dias <= 30
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                          : dias <= 60
-                            ? "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
-                            : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400";
-                      return (
-                        <span
-                          className={cn(
-                            "rounded px-1.5 py-0.5 text-[10px] font-medium",
-                            cor,
-                          )}
-                          title="Dias no estoque desde que ficou disponível"
-                        >
-                          {dias}d estoque
-                        </span>
-                      );
-                    })()}
-                  </div>
-                </div>
-              ))}
+        {/* Cards */}
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
+          {items.length === 0 && (
+            <div className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
+              Arraste um veículo para cá
             </div>
-          </div>
-        );
-      })}
-    </div>
+          )}
+          {items.map((v) => (
+            <div
+              key={v.id}
+              draggable
+              onDragStart={(e) => {
+                setDragId(v.id);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragEnd={() => {
+                setDragId(null);
+                setOverStage(null);
+              }}
+              onClick={() => router.push(`/t/${slug}/veiculos/${v.id}/editar`)}
+              className={cn(
+                "group cursor-pointer rounded-xl border bg-background p-2.5 shadow-card transition-all hover:shadow-card-hover",
+                dragId === v.id && "opacity-50",
+              )}
+            >
+              <div className="flex items-start gap-2.5">
+                <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
+                  {v.thumbUrl ? (
+                    <Image
+                      src={v.thumbUrl}
+                      alt={`${v.marca} ${v.modelo}`}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <Car className="h-5 w-5" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium leading-tight">
+                    {v.marca} {v.modelo}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {v.versao ?? v.cor ?? "—"} · {v.anoFabricacao}/{v.anoModelo}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {formatCentavos(v.precoVendaCentavos)}
+                  </p>
+                </div>
+                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 hidden md:block" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {v.placa && (
+                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    {v.placa}
+                  </span>
+                )}
+                {(() => {
+                  const dias = diasNoEstoque(v.dataChegada);
+                  if (dias === null) return null;
+                  const cor =
+                    dias <= 30
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                      : dias <= 60
+                        ? "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                        : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400";
+                  return (
+                    <span
+                      className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", cor)}
+                      title="Dias no estoque desde que ficou disponível"
+                    >
+                      {dias}d estoque
+                    </span>
+                  );
+                })()}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* ── Mobile: tabs + single column ── */}
+      <div className={cn("flex flex-col gap-3 md:hidden", className)}>
+        {/* Stage tabs */}
+        <div className="flex overflow-x-auto gap-1 pb-1 scrollbar-none">
+          {STAGE_ORDER.map((stage) => {
+            const cfg = STAGE_CONFIG[stage];
+            const count = veiculos.filter((v) => v.status === stage).length;
+            return (
+              <button
+                key={stage}
+                onClick={() => setActiveStage(stage)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  activeStage === stage
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
+                {cfg.label}
+                <span className="rounded-full bg-background/20 px-1.5 py-0.5 text-[10px]">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Active column */}
+        <div className="flex-1 min-h-[400px]">
+          {renderColumn(activeStage)}
+        </div>
+      </div>
+
+      {/* ── Desktop: all columns side by side ── */}
+      <div className={cn("hidden md:flex gap-3 overflow-x-auto pb-2", className)}>
+        {STAGE_ORDER.map((stage) => (
+          <React.Fragment key={stage}>{renderColumn(stage)}</React.Fragment>
+        ))}
+      </div>
+    </>
   );
+
 }

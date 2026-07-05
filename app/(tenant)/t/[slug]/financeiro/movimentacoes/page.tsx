@@ -118,81 +118,129 @@ export default async function MovimentacoesPage({
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3 text-left">Descrição</th>
-                    <th className="px-5 py-3 text-left">Categoria</th>
-                    <th className="px-5 py-3 text-left">Vínculo</th>
-                    <th className="px-5 py-3 text-left">Data</th>
-                    <th className="px-5 py-3 text-right">Valor</th>
-                    <th className="px-5 py-3 text-center">Status</th>
-                    <th className="px-5 py-3 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {movimentacoes.map(m => {
-                    const isEntrada = m.tipo === "ENTRADA";
-                    const st = STATUS_LABEL[m.status] ?? STATUS_LABEL.PENDENTE;
-                    const vinculo = m.veiculo
-                      ? `${m.veiculo.marca} ${m.veiculo.modelo}${m.veiculo.placa ? ` (${m.veiculo.placa})` : ""}`
-                      : m.cliente?.nome ?? m.fornecedor?.nome ?? null;
-                    return (
-                      <tr key={m.id} className="transition-colors hover:bg-muted/20">
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            {isEntrada
-                              ? <ArrowDownLeft className="h-4 w-4 shrink-0 text-emerald-500" />
-                              : <ArrowUpRight className="h-4 w-4 shrink-0 text-red-500" />}
-                            <div>
-                              <Link href={`/t/${slug}/financeiro/movimentacoes/${m.id}/editar`} className="font-medium hover:underline">
-                                {m.descricao}
-                              </Link>
-                              {m.conta && <p className="text-xs text-muted-foreground">{m.conta.nome}</p>}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3">
-                          {m.categoria ? (
-                            <span className="inline-flex items-center gap-1.5">
-                              {m.categoria.cor && (
-                                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: m.categoria.cor }} />
-                              )}
-                              <span className="text-xs">{m.categoria.nome}</span>
-                            </span>
-                          ) : <span className="text-xs text-muted-foreground">—</span>}
-                        </td>
-                        <td className="px-5 py-3 text-xs text-muted-foreground max-w-[140px] truncate">
-                          {vinculo ?? "—"}
-                        </td>
-                        <td className="px-5 py-3 text-xs text-muted-foreground">
+        <>
+          {/* ── Mobile: cards ── */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {movimentacoes.map(m => {
+              const isEntrada = m.tipo === "ENTRADA";
+              const st = STATUS_LABEL[m.status] ?? STATUS_LABEL.PENDENTE;
+              const vinculo = m.veiculo
+                ? `${m.veiculo.marca} ${m.veiculo.modelo}${m.veiculo.placa ? ` (${m.veiculo.placa})` : ""}`
+                : m.cliente?.nome ?? m.fornecedor?.nome ?? null;
+              return (
+                <Link
+                  key={m.id}
+                  href={`/t/${slug}/financeiro/movimentacoes/${m.id}/editar`}
+                  className="rounded-xl border bg-card p-4 hover:bg-accent/40 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <div className={`mt-0.5 shrink-0 rounded-full p-1.5 ${isEntrada ? "bg-emerald-100 dark:bg-emerald-950" : "bg-red-100 dark:bg-red-950"}`}>
+                        {isEntrada
+                          ? <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          : <ArrowUpRight className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{m.descricao}</p>
+                        {m.conta && <p className="text-xs text-muted-foreground">{m.conta.nome}</p>}
+                        {m.categoria && (
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            {m.categoria.cor && <span className="h-2 w-2 rounded-full shrink-0" style={{ background: m.categoria.cor }} />}
+                            {m.categoria.nome}
+                          </span>
+                        )}
+                        {vinculo && <p className="text-xs text-muted-foreground truncate">{vinculo}</p>}
+                        <p className="text-xs text-muted-foreground mt-1">
                           {m.dataCompetencia.toLocaleDateString("pt-BR")}
-                          {m.dataVencimento && m.status === "PENDENTE" && (
-                            <p className="text-[10px]">Vence: {m.dataVencimento.toLocaleDateString("pt-BR")}</p>
-                          )}
-                        </td>
-                        <td className={`px-5 py-3 text-right font-semibold tabular-nums ${isEntrada ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                          {isEntrada ? "+" : "-"}{formatCentavos(m.valorCentavos)}
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          <Badge variant="secondary" className={`text-[10px] ${st.cls}`}>{st.label}</Badge>
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <Button asChild variant="ghost" size="sm" className="h-7">
-                            <Link href={`/t/${slug}/financeiro/movimentacoes/${m.id}/editar`}>Editar</Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                          {m.dataVencimento && m.status === "PENDENTE" && ` · Vence ${m.dataVencimento.toLocaleDateString("pt-BR")}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <p className={`font-bold tabular-nums text-sm ${isEntrada ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                        {isEntrada ? "+" : "-"}{formatCentavos(m.valorCentavos)}
+                      </p>
+                      <Badge variant="secondary" className={`text-[10px] ${st.cls}`}>{st.label}</Badge>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* ── Desktop: tabela ── */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="px-5 py-3 text-left">Descrição</th>
+                      <th className="px-5 py-3 text-left">Categoria</th>
+                      <th className="px-5 py-3 text-left">Vínculo</th>
+                      <th className="px-5 py-3 text-left">Data</th>
+                      <th className="px-5 py-3 text-right">Valor</th>
+                      <th className="px-5 py-3 text-center">Status</th>
+                      <th className="px-5 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {movimentacoes.map(m => {
+                      const isEntrada = m.tipo === "ENTRADA";
+                      const st = STATUS_LABEL[m.status] ?? STATUS_LABEL.PENDENTE;
+                      const vinculo = m.veiculo
+                        ? `${m.veiculo.marca} ${m.veiculo.modelo}${m.veiculo.placa ? ` (${m.veiculo.placa})` : ""}`
+                        : m.cliente?.nome ?? m.fornecedor?.nome ?? null;
+                      return (
+                        <tr key={m.id} className="transition-colors hover:bg-muted/20">
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-2">
+                              {isEntrada
+                                ? <ArrowDownLeft className="h-4 w-4 shrink-0 text-emerald-500" />
+                                : <ArrowUpRight className="h-4 w-4 shrink-0 text-red-500" />}
+                              <div>
+                                <Link href={`/t/${slug}/financeiro/movimentacoes/${m.id}/editar`} className="font-medium hover:underline">
+                                  {m.descricao}
+                                </Link>
+                                {m.conta && <p className="text-xs text-muted-foreground">{m.conta.nome}</p>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3">
+                            {m.categoria ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                {m.categoria.cor && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: m.categoria.cor }} />}
+                                <span className="text-xs">{m.categoria.nome}</span>
+                              </span>
+                            ) : <span className="text-xs text-muted-foreground">—</span>}
+                          </td>
+                          <td className="px-5 py-3 text-xs text-muted-foreground max-w-[140px] truncate">{vinculo ?? "—"}</td>
+                          <td className="px-5 py-3 text-xs text-muted-foreground">
+                            {m.dataCompetencia.toLocaleDateString("pt-BR")}
+                            {m.dataVencimento && m.status === "PENDENTE" && (
+                              <p className="text-[10px]">Vence: {m.dataVencimento.toLocaleDateString("pt-BR")}</p>
+                            )}
+                          </td>
+                          <td className={`px-5 py-3 text-right font-semibold tabular-nums ${isEntrada ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                            {isEntrada ? "+" : "-"}{formatCentavos(m.valorCentavos)}
+                          </td>
+                          <td className="px-5 py-3 text-center">
+                            <Badge variant="secondary" className={`text-[10px] ${st.cls}`}>{st.label}</Badge>
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            <Button asChild variant="ghost" size="sm" className="h-7">
+                              <Link href={`/t/${slug}/financeiro/movimentacoes/${m.id}/editar`}>Editar</Link>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

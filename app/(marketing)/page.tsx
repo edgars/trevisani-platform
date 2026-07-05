@@ -203,8 +203,8 @@ export default function HomePage() {
                 <span className="h-3 w-3 rounded-full bg-green-500/70" />
                 <span className="ml-3 text-xs text-slate-500">app.volante7.com.br/t/sualooja/veiculos</span>
               </div>
-              {/* Kanban mockup */}
-              <div className="grid grid-cols-4 gap-0 divide-x divide-white/5 p-4">
+              {/* Kanban mockup — 2 cols on mobile, 4 on wider */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-white/5 p-4">
                 {[
                   { label: "Em Preparação", color: "bg-yellow-500", n: 4 },
                   { label: "Disponível", color: "bg-green-500", n: 11 },
@@ -396,7 +396,7 @@ export default function HomePage() {
                   <div className="h-3 w-32 rounded bg-white/10 mx-auto mb-4" />
                   <div className="h-8 w-28 rounded-full bg-red-600/70 mx-auto" />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="rounded-lg bg-slate-800 overflow-hidden">
                       <div className="h-16 bg-slate-700" />

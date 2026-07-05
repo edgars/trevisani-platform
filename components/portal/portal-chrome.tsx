@@ -5,10 +5,12 @@ import Link from "next/link";
 import {
   Bell,
   LogOut,
+  Menu,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Sun,
+  X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -44,10 +46,19 @@ export function PortalChrome({
   children,
 }: PortalChromeProps) {
   const [collapsed, setCollapsed] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
   }, []);
+
+  // Close mobile drawer on route change (any click inside nav)
+  React.useEffect(() => {
+    if (!mobileOpen) return;
+    const close = () => setMobileOpen(false);
+    window.addEventListener("popstate", close);
+    return () => window.removeEventListener("popstate", close);
+  }, [mobileOpen]);
 
   function toggleCollapsed() {
     setCollapsed((v) => {
@@ -56,99 +67,147 @@ export function PortalChrome({
     });
   }
 
+  const sidebarContent = (isMobile = false) => (
+    <>
+      {/* Brand */}
+      <div
+        className={cn(
+          "flex items-center border-b",
+          !isMobile && collapsed ? "h-20 justify-center px-2" : "h-20 px-4",
+        )}
+      >
+        <Link
+          href={brand.href}
+          className="flex min-w-0 w-full flex-col items-start gap-0.5"
+          onClick={() => isMobile && setMobileOpen(false)}
+        >
+          {!isMobile && collapsed ? (
+            <SteeringWheelIcon className="mx-auto h-10 w-10 text-foreground" />
+          ) : (
+            <>
+              <img
+                src="/logo-text.svg"
+                alt="Volante7"
+                className="w-full object-contain dark:[filter:brightness(0)_invert(1)]"
+                style={{ height: "56px" }}
+              />
+              {brand.caption && (
+                <p className="truncate text-[10px] uppercase tracking-widest text-muted-foreground pl-0.5">
+                  {brand.caption}
+                </p>
+              )}
+            </>
+          )}
+        </Link>
+        {isMobile && (
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="ml-2 shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
+            aria-label="Fechar menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Nav */}
+      <div
+        className="flex-1 overflow-y-auto"
+        onClick={() => isMobile && setMobileOpen(false)}
+      >
+        <SidebarNav items={navItems} collapsed={!isMobile && collapsed} />
+      </div>
+
+      {/* User footer */}
+      <div className={cn("space-y-1 py-3", !isMobile && collapsed ? "px-2" : "px-3")}>
+        <div
+          className={cn(
+            "flex items-center gap-3 rounded-lg py-2",
+            !isMobile && collapsed ? "justify-center px-0" : "px-3",
+          )}
+        >
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
+            title={!isMobile && collapsed ? usuario.nome : undefined}
+          >
+            {initials(usuario.nome)}
+          </div>
+          {(isMobile || !collapsed) && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-foreground">{usuario.nome}</p>
+              <p className="truncate text-[11px] text-muted-foreground">
+                {usuario.subtitulo ?? usuario.email}
+              </p>
+            </div>
+          )}
+        </div>
+        <form action={signOutAction}>
+          <Button
+            variant="outline"
+            size="sm"
+            type="submit"
+            title={!isMobile && collapsed ? "Sair" : undefined}
+            className={cn(
+              "w-full gap-2 rounded-full text-muted-foreground hover:text-foreground",
+              !isMobile && collapsed ? "justify-center px-0" : "justify-center",
+            )}
+          >
+            <LogOut className="h-4 w-4" />
+            {(isMobile || !collapsed) && "Sair"}
+          </Button>
+        </form>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen bg-muted/60 dark:bg-background">
-      {/* ── Sidebar ── */}
+      {/* ── Mobile overlay backdrop ── */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      {/* ── Mobile sidebar drawer ── */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r bg-background transition-transform duration-200 md:hidden",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        {sidebarContent(true)}
+      </aside>
+
+      {/* ── Desktop sidebar ── */}
       <aside
         className={cn(
           "hidden shrink-0 flex-col transition-[width] duration-200 md:flex",
           collapsed ? "w-[68px]" : "w-[260px]",
         )}
       >
-        {/* Brand */}
-        <div
-          className={cn(
-            "flex items-center border-b",
-            collapsed ? "h-20 justify-center px-2" : "h-20 px-4",
-          )}
-        >
-          <Link href={brand.href} className="flex min-w-0 w-full flex-col items-start gap-0.5">
-            {collapsed ? (
-              /* Sidebar recolhida: ícone de volante centralizado */
-              <SteeringWheelIcon className="mx-auto h-10 w-10 text-foreground" />
-            ) : (
-              /* Sidebar expandida: logo texto ocupa toda a largura, altura 80px total */
-              <>
-                <img
-                  src="/logo-text.svg"
-                  alt="Volante7"
-                  className="w-full object-contain dark:[filter:brightness(0)_invert(1)]"
-                  style={{ height: "56px" }}
-                />
-                {brand.caption && (
-                  <p className="truncate text-[10px] uppercase tracking-widest text-muted-foreground pl-0.5">
-                    {brand.caption}
-                  </p>
-                )}
-              </>
-            )}
-          </Link>
-        </div>
-
-        {/* Nav */}
-        <div className="flex-1 overflow-y-auto">
-          <SidebarNav items={navItems} collapsed={collapsed} />
-        </div>
-
-        {/* User footer */}
-        <div className={cn("space-y-1 py-3", collapsed ? "px-2" : "px-3")}>
-          <div
-            className={cn(
-              "flex items-center gap-3 rounded-lg py-2",
-              collapsed ? "justify-center px-0" : "px-3",
-            )}
-          >
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
-              title={collapsed ? usuario.nome : undefined}
-            >
-              {initials(usuario.nome)}
-            </div>
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-foreground">
-                  {usuario.nome}
-                </p>
-                <p className="truncate text-[11px] text-muted-foreground">
-                  {usuario.subtitulo ?? usuario.email}
-                </p>
-              </div>
-            )}
-          </div>
-          <form action={signOutAction}>
-            <Button
-              variant="outline"
-              size="sm"
-              type="submit"
-              title={collapsed ? "Sair" : undefined}
-              className={cn(
-                "w-full gap-2 rounded-full text-muted-foreground hover:text-foreground",
-                collapsed ? "justify-center px-0" : "justify-center",
-              )}
-            >
-              <LogOut className="h-4 w-4" />
-              {!collapsed && "Sair"}
-            </Button>
-          </form>
-        </div>
+        {sidebarContent(false)}
       </aside>
 
-      {/* ── Main panel (rounded card) ── */}
+      {/* ── Main panel ── */}
       <div className="flex min-w-0 flex-1 flex-col p-2 md:p-3 md:pl-0">
-        <div className="flex min-h-[calc(100vh-1.5rem)] flex-1 flex-col overflow-hidden rounded-2xl border bg-background shadow-card dark:bg-card">
+        <div className="flex min-h-[calc(100vh-1rem)] md:min-h-[calc(100vh-1.5rem)] flex-1 flex-col overflow-hidden rounded-2xl border bg-background shadow-card dark:bg-card">
           {/* Top bar */}
-          <header className="flex h-16 shrink-0 items-center gap-3 border-b px-4 md:px-5">
-            {/* Collapse toggle (desktop) */}
+          <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 md:gap-3 border-b px-3 md:px-5">
+            {/* Mobile hamburger */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setMobileOpen(true)}
+              className="h-9 w-9 shrink-0 rounded-xl md:hidden"
+              aria-label="Abrir menu"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+
+            {/* Desktop collapse toggle */}
             <Button
               variant="outline"
               size="icon"
@@ -163,13 +222,13 @@ export function PortalChrome({
               )}
             </Button>
 
-            {/* Mobile brand */}
-            <Link href={brand.href} className="flex items-center gap-2 md:hidden">
-              <SteeringWheelIcon className="h-6 w-6 shrink-0 text-foreground" />
+            {/* Mobile brand (visible when drawer is closed) */}
+            <Link href={brand.href} className="flex items-center gap-1.5 md:hidden">
+              <SteeringWheelIcon className="h-5 w-5 shrink-0 text-foreground" />
               <img
                 src="/logo-text.svg"
                 alt="Volante7"
-                className="h-6 w-auto object-contain dark:[filter:brightness(0)_invert(1)]"
+                className="h-5 w-auto object-contain dark:[filter:brightness(0)_invert(1)]"
               />
             </Link>
 
@@ -179,7 +238,7 @@ export function PortalChrome({
             </div>
 
             {/* Right actions */}
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1">
               <NotificationsButton />
               <ThemeToggle />
               <div
@@ -191,7 +250,8 @@ export function PortalChrome({
             </div>
           </header>
 
-          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
+          {/* Page content — tighter padding on mobile */}
+          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3 md:p-6">
             <div className="flex h-full flex-col">{children}</div>
           </main>
         </div>

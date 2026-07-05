@@ -69,114 +69,152 @@ export default async function ClientesPage({
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3 text-left">Cliente</th>
-                    <th className="px-5 py-3 text-left">Documento</th>
-                    <th className="px-5 py-3 text-left">Celular</th>
-                    <th className="px-5 py-3 text-left">Cidade / UF</th>
-                    <th className="px-5 py-3 text-left">Tags</th>
-                    <th className="px-5 py-3 text-center">Docs</th>
-                    <th className="px-5 py-3 text-center">LGPD</th>
-                    <th className="px-5 py-3 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {clientes.map((c) => (
-                    <tr key={c.id} className="transition-colors hover:bg-muted/20">
-                      <td className="px-5 py-3">
-                        <Link href={`/t/${slug}/clientes/${c.id}/editar`} className="group">
-                          <p className="font-medium group-hover:underline">{c.nome}</p>
-                          {c.email && (
-                            <p className="text-xs text-muted-foreground">{c.email}</p>
-                          )}
-                          {c.tipoPessoa === "PF" && c.aniversarioDia && c.aniversarioMes && (
-                            <p className="text-xs text-muted-foreground">
-                              🎂 {c.aniversarioDia}/{MESES[c.aniversarioMes]}
-                            </p>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <Badge variant="outline" className="text-[10px]">
-                            {c.tipoPessoa}
-                          </Badge>
-                          <span className="font-mono text-xs">
-                            {c.tipoPessoa === "PJ"
-                              ? formatarCnpj(c.documento)
-                              : formatarCpf(c.documento)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground">
-                        {formatarTelDisplay(c.telefone)}
-                      </td>
-                      <td className="px-5 py-3 text-muted-foreground">
-                        {c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {c.tags.slice(0, 3).map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-[10px] font-normal"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                          {c.tags.length > 3 && (
-                            <Badge variant="outline" className="text-[10px]">
-                              +{c.tags.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        <Link
-                          href={`/t/${slug}/clientes/${c.id}/documentos`}
-                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          {c._count.documentos}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        {c.consenteLgpd ? (
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 text-[10px]">
-                            <UserCheck className="mr-1 h-3 w-3" />OK
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-[10px]">Pendente</Badge>
+        <>
+          {/* ── Mobile: cards ── */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {clientes.map((c) => (
+              <Link
+                key={c.id}
+                href={`/t/${slug}/clientes/${c.id}/editar`}
+                className="rounded-xl border bg-card p-4 hover:bg-accent/40 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-sm truncate">{c.nome}</p>
+                      <Badge variant="outline" className="text-[10px] shrink-0">{c.tipoPessoa}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                      {c.tipoPessoa === "PJ" ? formatarCnpj(c.documento) : formatarCpf(c.documento)}
+                    </p>
+                    {c.email && <p className="text-xs text-muted-foreground mt-0.5 truncate">{c.email}</p>}
+                    {c.telefone && <p className="text-xs text-muted-foreground">{formatarTelDisplay(c.telefone)}</p>}
+                    {c.cidade && (
+                      <p className="text-xs text-muted-foreground">{c.cidade}{c.uf ? `/${c.uf}` : ""}</p>
+                    )}
+                    {c.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {c.tags.slice(0, 4).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-[10px] font-normal">{tag}</Badge>
+                        ))}
+                        {c.tags.length > 4 && (
+                          <Badge variant="outline" className="text-[10px]">+{c.tags.length - 4}</Badge>
                         )}
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                            <Link href={`/t/${slug}/clientes/${c.id}/editar`} title="Editar">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                          <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                            <Link href={`/t/${slug}/clientes/${c.id}/documentos`} title="Documentos">
-                              <FileText className="h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                          <ClienteAcoes slug={slug} clienteId={c.id} />
-                        </div>
-                      </td>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    {c.consenteLgpd ? (
+                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 text-[10px]">
+                        <UserCheck className="mr-1 h-3 w-3" />LGPD
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px]">LGPD pendente</Badge>
+                    )}
+                    {c._count.documentos > 0 && (
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <FileText className="h-3 w-3" />{c._count.documentos}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* ── Desktop: tabela ── */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="px-5 py-3 text-left">Cliente</th>
+                      <th className="px-5 py-3 text-left">Documento</th>
+                      <th className="px-5 py-3 text-left">Celular</th>
+                      <th className="px-5 py-3 text-left">Cidade / UF</th>
+                      <th className="px-5 py-3 text-left">Tags</th>
+                      <th className="px-5 py-3 text-center">Docs</th>
+                      <th className="px-5 py-3 text-center">LGPD</th>
+                      <th className="px-5 py-3 text-right">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  </thead>
+                  <tbody className="divide-y">
+                    {clientes.map((c) => (
+                      <tr key={c.id} className="transition-colors hover:bg-muted/20">
+                        <td className="px-5 py-3">
+                          <Link href={`/t/${slug}/clientes/${c.id}/editar`} className="group">
+                            <p className="font-medium group-hover:underline">{c.nome}</p>
+                            {c.email && <p className="text-xs text-muted-foreground">{c.email}</p>}
+                            {c.tipoPessoa === "PF" && c.aniversarioDia && c.aniversarioMes && (
+                              <p className="text-xs text-muted-foreground">
+                                🎂 {c.aniversarioDia}/{MESES[c.aniversarioMes]}
+                              </p>
+                            )}
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px]">{c.tipoPessoa}</Badge>
+                            <span className="font-mono text-xs">
+                              {c.tipoPessoa === "PJ" ? formatarCnpj(c.documento) : formatarCpf(c.documento)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-muted-foreground">{formatarTelDisplay(c.telefone)}</td>
+                        <td className="px-5 py-3 text-muted-foreground">
+                          {c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : "—"}
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {c.tags.slice(0, 3).map((tag) => (
+                              <Badge key={tag} variant="secondary" className="text-[10px] font-normal">{tag}</Badge>
+                            ))}
+                            {c.tags.length > 3 && (
+                              <Badge variant="outline" className="text-[10px]">+{c.tags.length - 3}</Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          <Link
+                            href={`/t/${slug}/clientes/${c.id}/documentos`}
+                            className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            <FileText className="h-3.5 w-3.5" />{c._count.documentos}
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          {c.consenteLgpd ? (
+                            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 text-[10px]">
+                              <UserCheck className="mr-1 h-3 w-3" />OK
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-[10px]">Pendente</Badge>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                              <Link href={`/t/${slug}/clientes/${c.id}/editar`} title="Editar">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Link>
+                            </Button>
+                            <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                              <Link href={`/t/${slug}/clientes/${c.id}/documentos`} title="Documentos">
+                                <FileText className="h-3.5 w-3.5" />
+                              </Link>
+                            </Button>
+                            <ClienteAcoes slug={slug} clienteId={c.id} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

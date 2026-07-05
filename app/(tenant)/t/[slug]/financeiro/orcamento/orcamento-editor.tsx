@@ -53,7 +53,7 @@ function LinhaEditor({
 }) {
   const cats = categorias.filter(c => c.tipo === tipo);
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
+    <div className="flex flex-wrap items-center gap-2 md:grid md:grid-cols-[1fr_auto_auto_auto]">
       <Input
         placeholder="Descrição"
         value={linha.descricao}
@@ -167,7 +167,7 @@ export function OrcamentoEditor({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
       {/* LEFT: editor */}
       <div className="space-y-4">
         {/* Month nav */}
