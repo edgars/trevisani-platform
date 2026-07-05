@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { AlertCircle, Lock, Mail } from "lucide-react";
 
 import { toast } from "sonner";
@@ -203,7 +203,6 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ erro }: LoginFormProps) {
-  const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? undefined;
 
@@ -250,14 +249,14 @@ export function LoginForm({ erro }: LoginFormProps) {
       return;
     }
 
-    // Mantém loading=true enquanto redireciona — overlay fica visível até sumir a página
-    const session = await getSession();
-    const dest =
-      callbackUrl ??
-      (session?.user?.tenantSlug ? `/t/${session.user.tenantSlug}` : "/admin");
+    // JWT cookie já foi setado pelo signIn().
+    // Usamos window.location.href (full-page navigation) para que o servidor
+    // leia o cookie diretamente — sem getSession() (extra HTTP) nem router.refresh().
+    const dest = callbackUrl
+      ? `/redirect?callbackUrl=${encodeURIComponent(callbackUrl)}`
+      : "/redirect";
 
-    router.push(dest);
-    router.refresh();
+    window.location.href = dest;
   }
 
   return (

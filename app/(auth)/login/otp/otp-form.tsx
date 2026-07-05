@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useActionState, useState } from "react";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { AlertCircle, CheckCircle2, KeyRound, Mail } from "lucide-react";
 
 import { AuthFormShell } from "@/app/(auth)/_components/auth-form-shell";
@@ -16,7 +16,6 @@ import { solicitarLoginOtp, type OtpLoginState } from "./actions";
 const initialState: OtpLoginState = { status: "idle" };
 
 export function OtpLoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? undefined;
 
@@ -46,13 +45,13 @@ export function OtpLoginForm() {
       return;
     }
 
-    const session = await getSession();
-    const dest =
-      callbackUrl ??
-      (session?.user?.tenantSlug ? `/t/${session.user.tenantSlug}` : "/admin");
+    // JWT cookie setado — full-page navigation para o servidor ler o cookie
+    // diretamente sem getSession() (extra HTTP) nem router.refresh().
+    const dest = callbackUrl
+      ? `/redirect?callbackUrl=${encodeURIComponent(callbackUrl)}`
+      : "/redirect";
 
-    router.push(dest);
-    router.refresh();
+    window.location.href = dest;
   }
 
   if (step === "email") {
