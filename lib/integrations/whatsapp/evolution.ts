@@ -23,6 +23,7 @@ export interface EvolutionInstance {
 export interface EvolutionChat {
   remoteJid: string;
   pushName?: string | null;
+  profilePicUrl?: string | null;
   updatedAt?: string;
   unreadCount?: number | null;
   lastMessage?: {
@@ -35,6 +36,27 @@ export interface EvolutionChat {
       imageMessage?: { caption?: string };
       documentMessage?: { title?: string };
     };
+  };
+}
+
+export interface EvolutionMessage {
+  key?: {
+    id?: string;
+    fromMe?: boolean;
+    remoteJid?: string;
+    remoteJidAlt?: string;
+  };
+  messageType?: string;
+  messageTimestamp?: number;
+  status?: string;
+  pushName?: string | null;
+  message?: {
+    conversation?: string;
+    extendedTextMessage?: { text?: string };
+    imageMessage?: { caption?: string; url?: string; mimetype?: string };
+    audioMessage?: { url?: string; mimetype?: string };
+    documentMessage?: { title?: string; url?: string; mimetype?: string };
+    stickerMessage?: { url?: string };
   };
 }
 
@@ -299,6 +321,56 @@ export async function listarChats(instanceName: string, take = 100): Promise<Evo
     // best-effort
   }
   return [];
+}
+
+/** Lista mensagens de um chat específico; fallback filtra client-side quando necessário. */
+export async function listarMensagens(
+  instanceName: string,
+  remoteJid: string,
+  take = 120,
+): Promise<EvolutionMessage[]> {
+  const extrair = (payload: unknown): EvolutionMessage[] => {
+    if (Array.isArray(payload)) return payload as EvolutionMessage[];
+    if (payload && typeof payload === "object") {
+      const obj = payload as Record<string, unknown>;
+      if (Array.isArray(obj.messages)) return obj.messages as EvolutionMessage[];
+      if (Array.isArray(obj.data)) return obj.data as EvolutionMessage[];
+      if (obj.data && typeof obj.data === "object") {
+        const data = obj.data as Record<string, unknown>;
+        if (Array.isArray(data.messages)) return data.messages as EvolutionMessage[];
+      }
+    }
+    return [];
+  };
+
+  try {
+    const filtered = await evFetch<unknown>(`/chat/findMessages/${instanceName}`, {
+      method: "POST",
+      body: JSON.stringify({
+        where: { key: { remoteJid } },
+        take,
+        skip: 0,
+      }),
+    });
+    const msgs = extrair(filtered);
+    if (msgs.length > 0) return msgs;
+  } catch {
+    // fall through
+  }
+
+  try {
+    const broad = await evFetch<unknown>(`/chat/findMessages/${instanceName}`, {
+      method: "POST",
+      body: JSON.stringify({ take: Math.max(take, 250), skip: 0 }),
+    });
+    return extrair(broad).filter((m) => {
+      const jid = m.key?.remoteJid;
+      const alt = m.key?.remoteJidAlt;
+      return jid === remoteJid || alt === remoteJid;
+    });
+  } catch {
+    return [];
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

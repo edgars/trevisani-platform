@@ -17,6 +17,7 @@ import {
   marcarComoLido,
   wppInstanceName,
 } from "./evolution";
+import { sincronizarConversaDaInstancia } from "./sync";
 
 function appUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? "https://volante7.com.br";
@@ -210,7 +211,7 @@ export async function enviarMensagemAction(
         tipo:      "text",
         corpo:     texto.trim(),
         timestamp: new Date(),
-        lida:      true,
+        lida:      false,
       },
     });
     await prisma.conversaWpp.update({
@@ -280,14 +281,26 @@ export async function getMensagensAction(
   const tenant = await requireTenantPorSlug(slug);
   const conversa = await prisma.conversaWpp.findUnique({
     where:  { id: conversaId },
-    select: { integracao: { select: { tenantId: true } } },
+    select: {
+      remoteJid: true,
+      integracao: { select: { id: true, tenantId: true, instanceName: true, status: true } },
+    },
   });
   if (!conversa || conversa.integracao.tenantId !== tenant.id) return [];
 
-  return prisma.mensagemWpp.findMany({
+  if (conversa.integracao.status === "CONECTADO") {
+    await sincronizarConversaDaInstancia({
+      integracaoId: conversa.integracao.id,
+      instanceName: conversa.integracao.instanceName,
+      remoteJid: conversa.remoteJid,
+    }).catch(() => {});
+  }
+
+  const mensagens = await prisma.mensagemWpp.findMany({
     where:   { conversaId, ...(after ? { timestamp: { gt: after } } : {}) },
-    orderBy: { timestamp: "asc" },
-    take:    100,
+    orderBy: { timestamp: "desc" },
+    take:    250,
     select:  { id: true, fromMe: true, corpo: true, tipo: true, timestamp: true, lida: true },
   });
+  return mensagens.reverse();
 }

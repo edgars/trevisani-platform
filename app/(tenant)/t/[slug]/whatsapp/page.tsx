@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
-import { formatarNumero, jidParaNumero } from "@/lib/integrations/whatsapp/evolution";
+import { formatarNumero, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
 import { sincronizarInboxDaInstancia } from "@/lib/integrations/whatsapp/sync";
 
 export const dynamic = "force-dynamic";
@@ -36,17 +36,13 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
     select:  { id: true, status: true, numeroConectado: true },
   });
 
-  // Fallback de bootstrap: se a instância já está conectada mas o inbox local
-  // ainda está vazio (ex.: webhook indisponível em algum período), importa os
-  // chats atuais da Evolution API para não deixar a tela "0 conversa(s)".
+  // Fallback contínuo: ao abrir o inbox, sincroniza chats da Evolution para
+  // capturar novas conversas mesmo quando webhook não entregou em tempo real.
   if (integracao?.status === "CONECTADO") {
-    const total = await prisma.conversaWpp.count({ where: { integracaoId: integracao.id } });
-    if (total === 0) {
-      await sincronizarInboxDaInstancia({
-        integracaoId: integracao.id,
-        instanceName: `loja-${tenant.id}`,
-      }).catch(() => {});
-    }
+    await sincronizarInboxDaInstancia({
+      integracaoId: integracao.id,
+      instanceName: `loja-${tenant.id}`,
+    }).catch(() => {});
   }
 
   const conversas = integracao
@@ -64,6 +60,14 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
         },
       })
     : [];
+
+  const avatarByJid = new Map<string, string>();
+  if (integracao?.status === "CONECTADO") {
+    const chats = await listarChats(`loja-${tenant.id}`, 150).catch(() => []);
+    for (const c of chats) {
+      if (c.remoteJid && c.profilePicUrl) avatarByJid.set(c.remoteJid, c.profilePicUrl);
+    }
+  }
 
   const totalNaoLidas = conversas.reduce((s, c) => s + c.totalNaoLidas, 0);
 
@@ -130,16 +134,26 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
               conversas.map(c => {
                 const ultimaMsg = c.mensagens[0];
                 const nome = c.cliente?.nome ?? c.nomeContato ?? formatarNumero(jidParaNumero(c.remoteJid));
+                const avatarUrl = avatarByJid.get(c.remoteJid);
                 const temNaoLidas = c.totalNaoLidas > 0;
                 return (
                   <Link
                     key={c.id}
                     href={`/t/${slug}/whatsapp/${c.id}`}
-                    className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-[#ebedf0]"
+                    className="flex min-h-[72px] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#ebedf0]"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase">
-                      {nome.slice(0, 2)}
-                    </div>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={nome}
+                        className="h-12 w-12 shrink-0 rounded-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase">
+                        {nome.slice(0, 2)}
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className={`truncate text-sm ${temNaoLidas ? "font-semibold" : "font-medium"}`}>

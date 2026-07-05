@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Search, User } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
-import { formatarNumero, jidParaNumero } from "@/lib/integrations/whatsapp/evolution";
+import { formatarNumero, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
 import { WppChat } from "./wpp-chat";
 
 export const dynamic = "force-dynamic";
@@ -39,14 +39,19 @@ export default async function ConversaPage({
       },
     },
   });
+  const chats = await listarChats(`loja-${tenant.id}`, 150).catch(() => []);
+  const avatarByJid = new Map<string, string>();
+  for (const c of chats) {
+    if (c.remoteJid && c.profilePicUrl) avatarByJid.set(c.remoteJid, c.profilePicUrl);
+  }
 
   const conversa = await prisma.conversaWpp.findFirst({
     where:   { id: conversaId, integracaoId: integracao.id },
     include: {
       cliente: { select: { id: true, nome: true } },
       mensagens: {
-        orderBy: { timestamp: "asc" },
-        take: 100,
+        orderBy: { timestamp: "desc" },
+        take: 250,
         select: { id: true, fromMe: true, corpo: true, tipo: true, timestamp: true, lida: true },
       },
     },
@@ -80,6 +85,7 @@ export default async function ConversaPage({
               const ultimaMsg = c.mensagens[0];
               const nomeContato =
                 c.cliente?.nome ?? c.nomeContato ?? formatarNumero(jidParaNumero(c.remoteJid));
+              const avatarUrl = avatarByJid.get(c.remoteJid);
               const ativo = c.id === conversaId;
               return (
                 <Link
@@ -89,9 +95,18 @@ export default async function ConversaPage({
                     ativo ? "bg-[#e9edef]" : "hover:bg-[#ebedf0]"
                   }`}
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase">
-                    {nomeContato.slice(0, 2)}
-                  </div>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={nomeContato}
+                      className="h-12 w-12 shrink-0 rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase">
+                      {nomeContato.slice(0, 2)}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className={`truncate text-sm ${c.totalNaoLidas > 0 ? "font-semibold" : "font-medium"}`}>
@@ -117,37 +132,17 @@ export default async function ConversaPage({
         </aside>
 
         <section className="flex min-w-0 flex-col">
-          <div className="flex items-center gap-3 border-b bg-[#f0f2f5] px-4 py-3">
-            <Button asChild variant="ghost" size="icon" className="lg:hidden">
-              <Link href={`/t/${slug}/whatsapp`}>
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase">
-              {nome.slice(0, 2)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{nome}</p>
-              <p className="text-xs text-muted-foreground">{numero}</p>
-            </div>
-            {conversa.cliente && (
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/t/${slug}/clientes/${conversa.cliente.id}/editar`}>
-                  <User className="mr-1.5 h-3.5 w-3.5" />
-                  Ver cliente
-                  <ExternalLink className="ml-1.5 h-3 w-3 opacity-60" />
-                </Link>
-              </Button>
-            )}
-          </div>
-
           <WppChat
             slug={slug}
             conversaId={conversaId}
+            nome={nome}
+            numero={numero}
+            avatarUrl={avatarByJid.get(conversa.remoteJid)}
+            clienteId={conversa.cliente?.id}
             initialMensagens={conversa.mensagens.map(m => ({
               ...m,
               timestamp: m.timestamp,
-            }))}
+            })).reverse()}
           />
         </section>
       </div>

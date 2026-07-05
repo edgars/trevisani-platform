@@ -66,7 +66,14 @@ function extrairMensagens(raw: unknown): MessageData[] {
     const obj = raw as Record<string, unknown>;
     if (obj.key) return [obj as unknown as MessageData];
     if (Array.isArray(obj.messages)) return obj.messages as MessageData[];
+    if (Array.isArray(obj.updates)) return obj.updates as MessageData[];
     if (obj.data && Array.isArray(obj.data)) return obj.data as MessageData[];
+    if (obj.data && typeof obj.data === "object") {
+      const dataObj = obj.data as Record<string, unknown>;
+      if (dataObj.key) return [dataObj as unknown as MessageData];
+      if (Array.isArray(dataObj.messages)) return dataObj.messages as MessageData[];
+      if (Array.isArray(dataObj.updates)) return dataObj.updates as MessageData[];
+    }
     if (obj.message && typeof obj.message === "object" && (obj.message as Record<string, unknown>).key) {
       return [obj.message as unknown as MessageData];
     }
@@ -183,6 +190,7 @@ async function handleMessagesUpsert(
 ) {
   const { key, message, pushName, messageTimestamp } = data;
   if (!key?.remoteJid) return;
+  const status = (data.status ?? "").toUpperCase();
 
   // Ignore group messages (JIDs ending with @g.us) and status broadcasts
   if (key.remoteJid.endsWith("@g.us")) return;
@@ -227,14 +235,13 @@ async function handleMessagesUpsert(
     update: {
       ultimaMensagem: timestamp,
       nomeContato:    pushName ?? undefined,
-      totalNaoLidas:  key.fromMe ? { set: 0 } : { increment: 1 },
     },
     create: {
       integracaoId,
       remoteJid:      key.remoteJid,
       nomeContato:    pushName ?? null,
       ultimaMensagem: timestamp,
-      totalNaoLidas:  key.fromMe ? 0 : 1,
+      totalNaoLidas:  0,
     },
     select: { id: true, clienteId: true },
   });
@@ -280,29 +287,41 @@ async function handleMessagesUpsert(
     }
   }
 
-  // Upsert mensagem (deduplication by messageId)
-  await prisma.mensagemWpp.upsert({
-    where:  { conversaId_messageId: { conversaId: conversa.id, messageId: key.id } },
-    update: {},
-    create: {
-      conversaId: conversa.id,
-      messageId:  key.id,
-      fromMe:     key.fromMe,
-      tipo,
-      corpo,
-      mediaUrl,
-      mimetype,
-      lida:       key.fromMe,
-      timestamp,
-    },
+  const msgExistente = await prisma.mensagemWpp.findUnique({
+    where: { conversaId_messageId: { conversaId: conversa.id, messageId: key.id } },
+    select: { id: true },
   });
+
+  if (!msgExistente) {
+    await prisma.mensagemWpp.create({
+      data: {
+        conversaId: conversa.id,
+        messageId:  key.id,
+        fromMe:     key.fromMe,
+        tipo,
+        corpo,
+        mediaUrl,
+        mimetype,
+        lida:       key.fromMe ? status === "READ" || status === "PLAYED" : false,
+        timestamp,
+      },
+    });
+
+    if (!key.fromMe) {
+      await prisma.conversaWpp.update({
+        where: { id: conversa.id },
+        data: { totalNaoLidas: { increment: 1 } },
+      });
+    }
+  }
 }
 
 async function handleMessagesUpdate(integracaoId: string, data: MessageData) {
-  const { key, status } = data;
+  const { key } = data;
+  const status = (data.status ?? "").toUpperCase();
   if (!key?.remoteJid || !status) return;
 
-  if (status === "READ") {
+  if (status === "READ" || status === "PLAYED") {
     const conversa = await prisma.conversaWpp.findUnique({
       where:  { integracaoId_remoteJid: { integracaoId, remoteJid: key.remoteJid } },
       select: { id: true },
