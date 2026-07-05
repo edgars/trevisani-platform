@@ -8,8 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
-import { formatarNumero, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
-import { sincronizarInboxDaInstancia } from "@/lib/integrations/whatsapp/sync";
+import { formatarNumero, jidCanonico, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
+import { sincronizarInstancia } from "@/lib/integrations/whatsapp/sync";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "WhatsApp — Inbox" };
@@ -33,15 +33,16 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
 
   const integracao = await prisma.integracaoWhatsApp.findUnique({
     where:   { tenantId: tenant.id },
-    select:  { id: true, status: true, numeroConectado: true },
+    select:  { id: true, status: true, numeroConectado: true, instanceName: true },
   });
 
-  // Fallback contínuo: ao abrir o inbox, sincroniza chats da Evolution para
-  // capturar novas conversas mesmo quando webhook não entregou em tempo real.
+  // Sync pull-based: ao abrir o inbox, puxa chats + mensagens da Evolution.
+  // Cobre novas conversas e respostas de clientes mesmo sem webhook.
   if (integracao?.status === "CONECTADO") {
-    await sincronizarInboxDaInstancia({
+    await sincronizarInstancia({
       integracaoId: integracao.id,
-      instanceName: `loja-${tenant.id}`,
+      instanceName: integracao.instanceName,
+      intervaloMs: 5000,
     }).catch(() => {});
   }
 
@@ -70,9 +71,12 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
 
   const avatarByJid = new Map<string, string>();
   if (integracao?.status === "CONECTADO") {
-    const chats = await listarChats(`loja-${tenant.id}`, 150).catch(() => []);
+    const chats = await listarChats(integracao.instanceName, 150).catch(() => []);
     for (const c of chats) {
-      if (c.remoteJid && c.profilePicUrl) avatarByJid.set(c.remoteJid, c.profilePicUrl);
+      if (!c.remoteJid || !c.profilePicUrl) continue;
+      // A foto pode vir no chat @lid — indexa pelo JID canônico da conversa.
+      const jid = jidCanonico(c.remoteJid, c.lastMessage?.key?.remoteJidAlt);
+      if (!avatarByJid.has(jid)) avatarByJid.set(jid, c.profilePicUrl);
     }
   }
 

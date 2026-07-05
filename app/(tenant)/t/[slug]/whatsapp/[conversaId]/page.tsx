@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
-import { formatarNumero, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
+import { formatarNumero, jidCanonico, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
+import { sincronizarInstancia } from "@/lib/integrations/whatsapp/sync";
 import { WppChat } from "./wpp-chat";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +23,24 @@ export default async function ConversaPage({
 
   const integracao = await prisma.integracaoWhatsApp.findUnique({
     where:  { tenantId: tenant.id },
-    select: { id: true, numeroConectado: true },
+    select: { id: true, numeroConectado: true, instanceName: true, status: true },
   });
   if (!integracao) notFound();
+
+  // Sincroniza com a Evolution antes de renderizar, priorizando esta conversa —
+  // garante que respostas do cliente e leituras apareçam já no primeiro load.
+  if (integracao.status === "CONECTADO") {
+    const alvo = await prisma.conversaWpp.findFirst({
+      where:  { id: conversaId, integracaoId: integracao.id },
+      select: { remoteJid: true },
+    });
+    await sincronizarInstancia({
+      integracaoId: integracao.id,
+      instanceName: integracao.instanceName,
+      jidPrioritario: alvo?.remoteJid,
+      intervaloMs: 3000,
+    }).catch(() => {});
+  }
 
   const conversas = await prisma.conversaWpp.findMany({
     where: {
@@ -46,10 +62,12 @@ export default async function ConversaPage({
       },
     },
   });
-  const chats = await listarChats(`loja-${tenant.id}`, 150).catch(() => []);
+  const chats = await listarChats(integracao.instanceName, 150).catch(() => []);
   const avatarByJid = new Map<string, string>();
   for (const c of chats) {
-    if (c.remoteJid && c.profilePicUrl) avatarByJid.set(c.remoteJid, c.profilePicUrl);
+    if (!c.remoteJid || !c.profilePicUrl) continue;
+    const jid = jidCanonico(c.remoteJid, c.lastMessage?.key?.remoteJidAlt);
+    if (!avatarByJid.has(jid)) avatarByJid.set(jid, c.profilePicUrl);
   }
 
   const conversa = await prisma.conversaWpp.findFirst({
@@ -63,7 +81,8 @@ export default async function ConversaPage({
       },
     },
   });
-  if (!conversa) notFound();
+  // A conversa pode ter sido fundida na canônica pelo sync (@lid → número real).
+  if (!conversa) redirect(`/t/${slug}/whatsapp`);
 
   const nome = conversa.cliente?.nome ?? conversa.nomeContato ?? formatarNumero(jidParaNumero(conversa.remoteJid));
   const numero = formatarNumero(jidParaNumero(conversa.remoteJid));

@@ -17,7 +17,7 @@ import {
   marcarComoLido,
   wppInstanceName,
 } from "./evolution";
-import { sincronizarConversaDaInstancia } from "./sync";
+import { sincronizarInstancia } from "./sync";
 
 function appUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? "https://volante7.com.br";
@@ -289,10 +289,14 @@ export async function getMensagensAction(
   if (!conversa || conversa.integracao.tenantId !== tenant.id) return [];
 
   if (conversa.integracao.status === "CONECTADO") {
-    await sincronizarConversaDaInstancia({
+    // Puxa da Evolution antes de responder — garante que respostas do cliente
+    // (inclusive as entregues via @lid) e confirmações de leitura apareçam
+    // mesmo sem webhook. Throttle interno evita excesso de chamadas.
+    await sincronizarInstancia({
       integracaoId: conversa.integracao.id,
       instanceName: conversa.integracao.instanceName,
-      remoteJid: conversa.remoteJid,
+      jidPrioritario: conversa.remoteJid,
+      intervaloMs: 3500,
     }).catch(() => {});
   }
 

@@ -58,6 +58,20 @@ export interface EvolutionMessage {
     documentMessage?: { title?: string; url?: string; mimetype?: string };
     stickerMessage?: { url?: string };
   };
+  /** Histórico de status entregue pela Evolution (SERVER_ACK, DELIVERY_ACK, READ...). */
+  MessageUpdate?: { status?: string }[];
+}
+
+/**
+ * Resolve o JID canônico de uma mensagem/chat.
+ *
+ * A Evolution entrega mensagens recebidas de contatos com "addressing mode lid":
+ * `remoteJid = 123...@lid` e o número real em `remoteJidAlt = 55...@s.whatsapp.net`.
+ * Sem essa normalização a mesma pessoa vira duas conversas diferentes.
+ */
+export function jidCanonico(remoteJid: string, remoteJidAlt?: string | null): string {
+  if (remoteJidAlt?.endsWith("@s.whatsapp.net")) return remoteJidAlt;
+  return remoteJid;
 }
 
 export interface QrCodeData {
@@ -323,51 +337,40 @@ export async function listarChats(instanceName: string, take = 100): Promise<Evo
   return [];
 }
 
-/** Lista mensagens de um chat específico; fallback filtra client-side quando necessário. */
-export async function listarMensagens(
-  instanceName: string,
-  remoteJid: string,
-  take = 120,
-): Promise<EvolutionMessage[]> {
-  const extrair = (payload: unknown): EvolutionMessage[] => {
-    if (Array.isArray(payload)) return payload as EvolutionMessage[];
-    if (payload && typeof payload === "object") {
-      const obj = payload as Record<string, unknown>;
-      if (Array.isArray(obj.messages)) return obj.messages as EvolutionMessage[];
-      if (Array.isArray(obj.data)) return obj.data as EvolutionMessage[];
-      if (obj.data && typeof obj.data === "object") {
-        const data = obj.data as Record<string, unknown>;
-        if (Array.isArray(data.messages)) return data.messages as EvolutionMessage[];
+function extrairListaMensagens(payload: unknown): EvolutionMessage[] {
+  if (Array.isArray(payload)) return payload as EvolutionMessage[];
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    for (const chave of ["messages", "data", "records"]) {
+      const valor = obj[chave];
+      if (Array.isArray(valor)) return valor as EvolutionMessage[];
+      // Formato real da v2: { messages: { total, pages, currentPage, records: [...] } }
+      if (valor && typeof valor === "object") {
+        const registros = (valor as Record<string, unknown>).records;
+        if (Array.isArray(registros)) return registros as EvolutionMessage[];
       }
     }
-    return [];
-  };
-
-  try {
-    const filtered = await evFetch<unknown>(`/chat/findMessages/${instanceName}`, {
-      method: "POST",
-      body: JSON.stringify({
-        where: { key: { remoteJid } },
-        take,
-        skip: 0,
-      }),
-    });
-    const msgs = extrair(filtered);
-    if (msgs.length > 0) return msgs;
-  } catch {
-    // fall through
   }
+  return [];
+}
 
+/**
+ * Busca as mensagens mais recentes da instância inteira (todas as conversas).
+ *
+ * A busca é intencionalmente ampla: filtrar por `remoteJid` no servidor perde
+ * as mensagens recebidas via `@lid` (o filtro não considera `remoteJidAlt`).
+ * O agrupamento por contato é feito no nosso lado, via `jidCanonico`.
+ */
+export async function listarTodasMensagens(
+  instanceName: string,
+  take = 300,
+): Promise<EvolutionMessage[]> {
   try {
-    const broad = await evFetch<unknown>(`/chat/findMessages/${instanceName}`, {
+    const payload = await evFetch<unknown>(`/chat/findMessages/${instanceName}`, {
       method: "POST",
-      body: JSON.stringify({ take: Math.max(take, 250), skip: 0 }),
+      body: JSON.stringify({ take, skip: 0 }),
     });
-    return extrair(broad).filter((m) => {
-      const jid = m.key?.remoteJid;
-      const alt = m.key?.remoteJidAlt;
-      return jid === remoteJid || alt === remoteJid;
-    });
+    return extrairListaMensagens(payload);
   } catch {
     return [];
   }
