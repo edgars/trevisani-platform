@@ -23,6 +23,7 @@ export default async function VitrinePage({ params }: Params) {
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
+      slug: true,
       marca: true,
       modelo: true,
       versao: true,
@@ -90,7 +91,7 @@ export default async function VitrinePage({ params }: Params) {
             {destaques.map((v) => (
               <Link
                 key={v.id}
-                href={`/veiculo/${v.id}`}
+                href={`/veiculo/${v.slug}`}
                 className="group rounded-xl border overflow-hidden transition-shadow hover:shadow-card-hover"
               >
                 {v.fotos[0] ? (

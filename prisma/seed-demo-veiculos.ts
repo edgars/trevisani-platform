@@ -7,6 +7,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { gerarSlugVeiculoUnico } from "../lib/veiculos/slug";
 
 const prisma = new PrismaClient();
 
@@ -234,10 +235,18 @@ async function main() {
     }
 
     const fotos = FOTOS[v.modelo] ?? [];
+    const slug = await gerarSlugVeiculoUnico({
+      tenantId: tenant.id,
+      marca: v.marca,
+      modelo: v.modelo,
+      versao: v.versao,
+      anoModelo: v.anoModelo,
+    });
 
     const veiculo = await prisma.veiculo.create({
       data: {
         tenantId:           tenant.id,
+        slug,
         placa:              v.placa,
         marca:              v.marca,
         modelo:             v.modelo,

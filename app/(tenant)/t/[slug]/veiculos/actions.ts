@@ -9,6 +9,7 @@ import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
 import { parseCentavos } from "@/lib/utils";
 import { verificarLimiteVeiculos, notificarLimiteVeiculosAtingido } from "@/lib/tenant/upgrade";
+import { gerarSlugVeiculoUnico } from "@/lib/veiculos/slug";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -128,9 +129,18 @@ export async function criarVeiculoAction(
 
   const data = parsed.data;
 
+  const slug = await gerarSlugVeiculoUnico({
+    tenantId,
+    marca: data.marca,
+    modelo: data.modelo,
+    versao: data.versao,
+    anoModelo: data.anoModelo,
+  });
+
   await prisma.veiculo.create({
     data: {
       tenantId,
+      slug,
       marca:              data.marca,
       modelo:             data.modelo,
       versao:             data.versao,
@@ -241,9 +251,22 @@ export async function atualizarVeiculoAction(
     return { error: "Estágio inválido." };
   }
 
+  // Autocura: veículos antigos (criados antes do slug existir) ganham um na
+  // primeira edição. Uma vez definido, o slug não muda mais — preserva links
+  // já compartilhados/indexados por buscadores.
+  const slug = veiculo.slug ?? (await gerarSlugVeiculoUnico({
+    tenantId,
+    marca:     data.marca,
+    modelo:    data.modelo,
+    versao:    data.versao,
+    anoModelo: data.anoModelo,
+    excluirId: veiculoId,
+  }));
+
   await prisma.veiculo.update({
     where: { id: veiculoId },
     data: {
+      slug,
       marca:              data.marca,
       modelo:             data.modelo,
       versao:             data.versao,

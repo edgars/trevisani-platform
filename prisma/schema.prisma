@@ -685,6 +685,7 @@ model DocumentoCliente {
 model Veiculo {
   id                  String              @id @default(cuid())
   tenantId            String
+  slug                String              // amigável p/ URL pública (ex: honda-civic-2020), único por loja
   placa               String?
   renavam             String?
   chassi              String?
@@ -745,6 +746,7 @@ model Veiculo {
 
   @@unique([tenantId, chassi])
   @@unique([tenantId, placa])
+  @@unique([tenantId, slug])
   @@index([tenantId, status])
   @@index([tenantId, marca, modelo])
   @@map("veiculo")

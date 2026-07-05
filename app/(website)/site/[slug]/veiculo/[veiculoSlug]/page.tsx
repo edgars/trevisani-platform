@@ -1,56 +1,106 @@
 import type { Metadata } from "next";
+import type { Prisma } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireWebsite } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
 import { formatCentavos } from "@/lib/utils";
+import { getTenantPublicUrl } from "@/lib/tenant/public-url";
 
 interface Params {
-  params: Promise<{ slug: string; id: string }>;
+  params: Promise<{ slug: string; veiculoSlug: string }>;
+}
+
+const VEICULO_SELECT = {
+  id: true,
+  slug: true,
+  marca: true,
+  modelo: true,
+  versao: true,
+  anoFabricacao: true,
+  anoModelo: true,
+  cor: true,
+  combustivel: true,
+  cambio: true,
+  kmAtual: true,
+  categoria: true,
+  precoVendaCentavos: true,
+  observacoes: true,
+  updatedAt: true,
+  fotos: {
+    where: { status: "PRONTO_VENDA" },
+    orderBy: [{ destaque: "desc" }, { ordem: "asc" }],
+    select: { url: true, legenda: true, destaque: true },
+  },
+} satisfies Prisma.VeiculoSelect;
+
+/** Descrição curta (~155 caracteres) para <meta name="description"> e OG. */
+function montarDescricao(
+  v: { marca: string; modelo: string; versao: string | null; anoFabricacao: number; anoModelo: number; kmAtual: number | null; combustivel: string | null; cambio: string | null; precoVendaCentavos: number; observacoes: string | null },
+  tenantNome: string,
+): string {
+  const partes = [
+    `${v.marca} ${v.modelo}${v.versao ? ` ${v.versao}` : ""}`,
+    `${v.anoFabricacao}/${v.anoModelo}`,
+    v.kmAtual != null ? `${v.kmAtual.toLocaleString("pt-BR")} km` : null,
+    v.combustivel ?? null,
+    v.cambio ?? null,
+    v.precoVendaCentavos > 0 ? `por ${formatCentavos(v.precoVendaCentavos)}` : null,
+  ].filter(Boolean);
+
+  const base = `${partes.join(" · ")} — disponível na ${tenantNome}.`;
+  if (v.observacoes) {
+    const extra = ` ${v.observacoes.replace(/\s+/g, " ").trim()}`;
+    return `${base}${extra}`.slice(0, 155).trim();
+  }
+  return base.slice(0, 155).trim();
+}
+
+async function buscarVeiculo(tenantId: string, veiculoSlug: string) {
+  return prisma.veiculo.findFirst({
+    where: { slug: veiculoSlug, tenantId, status: "DISPONIVEL" },
+    select: VEICULO_SELECT,
+  });
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const { slug, id } = await params;
+  const { slug, veiculoSlug } = await params;
   const tenant = await requireWebsite(slug);
-  const veiculo = await prisma.veiculo.findFirst({
-    where: { id, tenantId: tenant.id, status: "DISPONIVEL" },
-    select: { marca: true, modelo: true, anoModelo: true },
-  });
+  const veiculo = await buscarVeiculo(tenant.id, veiculoSlug);
   if (!veiculo) return { title: "Veículo não encontrado" };
+
+  const cfg = tenant.websiteConfig;
+  const titulo = `${veiculo.marca} ${veiculo.modelo}${veiculo.versao ? ` ${veiculo.versao}` : ""} ${veiculo.anoModelo}`;
+  const descricao = montarDescricao(veiculo, tenant.nome);
+  const canonical = `${getTenantPublicUrl(slug)}/veiculo/${veiculo.slug}`;
+  const imagemDestaque = veiculo.fotos[0]?.url ?? cfg.logoUrl ?? undefined;
+
   return {
-    title: `${veiculo.marca} ${veiculo.modelo} ${veiculo.anoModelo}`,
+    title: titulo,
+    description: descricao,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: titulo,
+      description: descricao,
+      url: canonical,
+      siteName: tenant.nome,
+      ...(imagemDestaque ? { images: [{ url: imagemDestaque, width: 1200, height: 900, alt: titulo }] } : {}),
+    },
+    twitter: {
+      card: imagemDestaque ? "summary_large_image" : "summary",
+      title: titulo,
+      description: descricao,
+      ...(imagemDestaque ? { images: [imagemDestaque] } : {}),
+    },
   };
 }
 
 export default async function VeiculoPage({ params }: Params) {
-  const { slug, id } = await params;
+  const { slug, veiculoSlug } = await params;
   const tenant = await requireWebsite(slug);
-
-  const veiculo = await prisma.veiculo.findFirst({
-    where: { id, tenantId: tenant.id, status: "DISPONIVEL" },
-    select: {
-      id: true,
-      marca: true,
-      modelo: true,
-      versao: true,
-      anoFabricacao: true,
-      anoModelo: true,
-      cor: true,
-      combustivel: true,
-      cambio: true,
-      kmAtual: true,
-      categoria: true,
-      precoVendaCentavos: true,
-      observacoes: true,
-      fotos: {
-        where: { status: "PRONTO_VENDA" },
-        orderBy: [{ destaque: "desc" }, { ordem: "asc" }],
-        select: { url: true, legenda: true, destaque: true },
-      },
-    },
-  });
-
+  const veiculo = await buscarVeiculo(tenant.id, veiculoSlug);
   if (!veiculo) notFound();
 
   const cfg = tenant.websiteConfig;
@@ -76,8 +126,45 @@ export default async function VeiculoPage({ params }: Params) {
     { label: "Categoria", value: veiculo.categoria },
   ].filter((item) => item.value != null && item.value !== "");
 
+  const canonical = `${getTenantPublicUrl(slug)}/veiculo/${veiculo.slug}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Vehicle",
+    name: `${veiculo.marca} ${veiculo.modelo}${veiculo.versao ? ` ${veiculo.versao}` : ""}`,
+    brand: veiculo.marca,
+    model: veiculo.modelo,
+    vehicleModelDate: String(veiculo.anoModelo),
+    productionDate: String(veiculo.anoFabricacao),
+    ...(veiculo.cor ? { color: veiculo.cor } : {}),
+    ...(veiculo.cambio ? { vehicleTransmission: veiculo.cambio } : {}),
+    ...(veiculo.combustivel ? { fuelType: veiculo.combustivel } : {}),
+    ...(veiculo.kmAtual != null
+      ? { mileageFromOdometer: { "@type": "QuantitativeValue", value: veiculo.kmAtual, unitCode: "KMT" } }
+      : {}),
+    ...(veiculo.fotos.length > 0 ? { image: veiculo.fotos.map((f) => f.url) } : {}),
+    url: canonical,
+    ...(veiculo.precoVendaCentavos > 0
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: (veiculo.precoVendaCentavos / 100).toFixed(2),
+            priceCurrency: "BRL",
+            availability: "https://schema.org/InStock",
+            url: canonical,
+            seller: { "@type": "AutoDealer", name: tenant.nome },
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="container mx-auto px-4 py-10">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <Link
         href="/estoque"
         className="text-sm text-muted-foreground hover:underline mb-6 inline-flex items-center gap-1"

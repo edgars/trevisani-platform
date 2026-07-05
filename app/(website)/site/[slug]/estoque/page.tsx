@@ -36,6 +36,7 @@ export default async function EstoquePage({ params, searchParams }: Params) {
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
+      slug: true,
       marca: true,
       modelo: true,
       versao: true,
@@ -140,7 +141,7 @@ export default async function EstoquePage({ params, searchParams }: Params) {
             {veiculos.map((v) => (
               <Link
                 key={v.id}
-                href={`/veiculo/${v.id}`}
+                href={`/veiculo/${v.slug}`}
                 className="group rounded-xl border overflow-hidden transition-shadow hover:shadow-card-hover bg-white"
               >
                 {v.fotos[0] ? (
