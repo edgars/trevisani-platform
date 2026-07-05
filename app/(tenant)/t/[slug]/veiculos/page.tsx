@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/db/client";
 import { requireSession } from "@/lib/auth/session";
+import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { cn, formatCentavos } from "@/lib/utils";
 import { EstoqueAcoes } from "./estoque-acoes";
 import { VeiculosKanban } from "./veiculos-kanban";
@@ -29,8 +30,12 @@ export default async function VeiculosPage({
 
   const view = filters.view === "lista" ? "lista" : "kanban";
 
-  // Usa tenantId da sessão JWT — sem round-trip extra ao banco
-  const tenantId = session.user.tenantId!;
+  // STAFF usa tenantId da sessão; PLATAFORMA resolve via slug da URL.
+  // Isso evita tenantId nulo quando um admin global abre /t/[slug]/veiculos.
+  const tenantId =
+    session.user.escopo === "PLATAFORMA"
+      ? (await requireTenantPorSlug(slug)).id
+      : session.user.tenantId!;
 
   const where: any = { tenantId };
   // No kanban o filtro de status não se aplica (as colunas já separam)
