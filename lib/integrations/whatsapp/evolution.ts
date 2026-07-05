@@ -29,7 +29,7 @@ export interface EvolutionChat {
   lastMessage?: {
     messageType?: string;
     messageTimestamp?: number;
-    key?: { id?: string; fromMe?: boolean; remoteJid?: string };
+    key?: { id?: string; fromMe?: boolean; remoteJid?: string; remoteJidAlt?: string };
     message?: {
       conversation?: string;
       extendedTextMessage?: { text?: string };

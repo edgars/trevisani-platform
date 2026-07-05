@@ -50,7 +50,11 @@ export async function sincronizarInboxDaInstancia(params: {
   let mensagensCriadas = 0;
 
   for (const chat of chats) {
-    const remoteJid = chat.remoteJid;
+    const canonicalRemoteJid =
+      chat.lastMessage?.key?.remoteJidAlt?.endsWith("@s.whatsapp.net")
+        ? chat.lastMessage.key.remoteJidAlt
+        : chat.remoteJid;
+    const remoteJid = canonicalRemoteJid;
     if (!remoteJid) continue;
     if (remoteJid === "status@broadcast") continue;
     if (remoteJid.endsWith("@g.us")) continue;

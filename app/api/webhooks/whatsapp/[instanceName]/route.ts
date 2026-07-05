@@ -29,6 +29,7 @@ interface EvolutionWebhookPayload {
 interface MessageData {
   key: {
     remoteJid: string;
+    remoteJidAlt?: string;
     fromMe: boolean;
     id: string;
   };
@@ -191,10 +192,14 @@ async function handleMessagesUpsert(
   const { key, message, pushName, messageTimestamp } = data;
   if (!key?.remoteJid) return;
   const status = (data.status ?? "").toUpperCase();
+  const canonicalRemoteJid =
+    key.remoteJidAlt?.endsWith("@s.whatsapp.net")
+      ? key.remoteJidAlt
+      : key.remoteJid;
 
   // Ignore group messages (JIDs ending with @g.us) and status broadcasts
-  if (key.remoteJid.endsWith("@g.us")) return;
-  if (key.remoteJid === "status@broadcast") return;
+  if (canonicalRemoteJid.endsWith("@g.us")) return;
+  if (canonicalRemoteJid === "status@broadcast") return;
 
   const timestamp = messageTimestamp
     ? new Date(messageTimestamp * 1000)
@@ -231,14 +236,14 @@ async function handleMessagesUpsert(
 
   // Upsert conversa (sem clienteId por enquanto)
   const conversa = await prisma.conversaWpp.upsert({
-    where:  { integracaoId_remoteJid: { integracaoId, remoteJid: key.remoteJid } },
+    where:  { integracaoId_remoteJid: { integracaoId, remoteJid: canonicalRemoteJid } },
     update: {
       ultimaMensagem: timestamp,
       nomeContato:    pushName ?? undefined,
     },
     create: {
       integracaoId,
-      remoteJid:      key.remoteJid,
+      remoteJid:      canonicalRemoteJid,
       nomeContato:    pushName ?? null,
       ultimaMensagem: timestamp,
       totalNaoLidas:  0,
@@ -248,7 +253,7 @@ async function handleMessagesUpsert(
 
   // Vincula/cria ClienteFinal somente para mensagens recebidas (não enviadas pela loja)
   if (!key.fromMe && !conversa.clienteId) {
-    const numero = key.remoteJid.split("@")[0];
+    const numero = canonicalRemoteJid.split("@")[0];
     // Últimos 8 dígitos para tolerar DDI/DDD variados no campo telefone
     const sufixo = numero.slice(-8);
 
@@ -320,10 +325,14 @@ async function handleMessagesUpdate(integracaoId: string, data: MessageData) {
   const { key } = data;
   const status = (data.status ?? "").toUpperCase();
   if (!key?.remoteJid || !status) return;
+  const canonicalRemoteJid =
+    key.remoteJidAlt?.endsWith("@s.whatsapp.net")
+      ? key.remoteJidAlt
+      : key.remoteJid;
 
   if (status === "READ" || status === "PLAYED") {
     const conversa = await prisma.conversaWpp.findUnique({
-      where:  { integracaoId_remoteJid: { integracaoId, remoteJid: key.remoteJid } },
+      where:  { integracaoId_remoteJid: { integracaoId, remoteJid: canonicalRemoteJid } },
       select: { id: true },
     });
     if (conversa) {
