@@ -60,10 +60,28 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, i
     return () => clearInterval(id);
   }, [status, slug]);
 
+  // Salvaguarda: se ficarmos em "AGUARDANDO_QR" sem nenhum QR (ex.: estado
+  // preso de uma tentativa anterior, ou falha silenciosa da Evolution API),
+  // não trava girando pra sempre — depois de 15s, cai pra erro com opção de tentar de novo.
+  React.useEffect(() => {
+    if (status !== "AGUARDANDO_QR" || qrCode) return;
+
+    const timeout = setTimeout(() => {
+      setStatus("ERRO");
+      toast.error("Não foi possível gerar o QR Code. Tente novamente.");
+    }, 15000);
+    return () => clearTimeout(timeout);
+  }, [status, qrCode]);
+
   function handleConectar() {
     startTransition(async () => {
       const result = await conectarWhatsAppAction(slug);
-      if (result.error) { toast.error(result.error); return; }
+      if (result.error) {
+        toast.error(result.error);
+        setStatus(result.status ?? "ERRO");
+        setQrCode(null);
+        return;
+      }
       setStatus(result.status ?? "AGUARDANDO_QR");
       setQrCode(result.qrCode ?? null);
     });

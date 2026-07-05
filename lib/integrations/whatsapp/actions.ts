@@ -14,6 +14,7 @@ import {
   deletarInstancia,
   enviarTexto,
   marcarComoLido,
+  wppInstanceName,
 } from "./evolution";
 
 function appUrl(): string {
@@ -37,9 +38,9 @@ export async function conectarWhatsAppAction(
   const tenant  = await requireTenantPorSlug(slug);
   await assertWppEnabled(tenant.id);
 
-  const instanceName  = slug;
+  const instanceName  = wppInstanceName(tenant.id);
   const webhookSecret = randomBytes(32).toString("hex");
-  const webhookUrl    = `${appUrl()}/api/webhooks/whatsapp/${slug}`;
+  const webhookUrl    = `${appUrl()}/api/webhooks/whatsapp/${instanceName}`;
 
   // Upsert integration record
   const integracao = await prisma.integracaoWhatsApp.upsert({
@@ -69,7 +70,16 @@ export async function conectarWhatsAppAction(
     revalidatePath(`/t/${slug}/whatsapp/configurar`);
     return { qrCode: qr.qrcode, status: "AGUARDANDO_QR" };
   } catch (err) {
-    return { error: String(err) };
+    // Evita deixar o registro preso em "AGUARDANDO_QR" sem QR code — isso
+    // travava a tela em "Gerando QR code..." para sempre a cada novo acesso,
+    // já que o status é lido do banco a cada carregamento da página.
+    await prisma.integracaoWhatsApp.update({
+      where: { tenantId: tenant.id },
+      data:  { status: "ERRO", qrCode: null, qrExpiresAt: null },
+    }).catch(() => {});
+
+    revalidatePath(`/t/${slug}/whatsapp/configurar`);
+    return { error: String(err), status: "ERRO" };
   }
 }
 

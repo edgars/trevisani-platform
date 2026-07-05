@@ -1513,7 +1513,7 @@ enum StatusWpp {
 model IntegracaoWhatsApp {
   id              String    @id @default(cuid())
   tenantId        String    @unique
-  instanceName    String    @unique // = tenant slug
+  instanceName    String    @unique // = `loja-{tenantId}` — estável mesmo se o slug da loja mudar
   status          StatusWpp @default(DESCONECTADO)
   numeroConectado String?
   qrCode          String?   // base64 do QR atual (temporário)

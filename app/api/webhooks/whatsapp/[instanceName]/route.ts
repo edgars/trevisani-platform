@@ -1,6 +1,10 @@
 /**
  * Webhook receiver for Evolution API events.
- * URL registered per tenant: /api/webhooks/whatsapp/{slug}
+ * URL registered per tenant: /api/webhooks/whatsapp/{instanceName}
+ *
+ * `instanceName` = `loja-{tenantId}` (ver lib/integrations/whatsapp/evolution.ts).
+ * Usamos o tenantId (imutável) em vez do slug da loja para que trocar o
+ * endereço da vitrine não quebre uma conexão de WhatsApp já ativa.
  *
  * Events handled:
  *   MESSAGES_UPSERT    — new messages received or sent
@@ -58,9 +62,9 @@ interface QrCodeData {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ instanceName: string }> },
 ) {
-  const { slug } = await params;
+  const { instanceName } = await params;
 
   const payload = await req.json().catch(() => null) as EvolutionWebhookPayload | null;
   if (!payload) return NextResponse.json({ error: "invalid body" }, { status: 400 });
@@ -68,7 +72,7 @@ export async function POST(
   // Verify secret
   const secret = req.headers.get("x-webhook-secret");
   const integracao = await prisma.integracaoWhatsApp.findFirst({
-    where: { instanceName: slug },
+    where: { instanceName },
     select: { id: true, tenantId: true, webhookSecret: true, status: true, criarLeadAuto: true },
   });
 
@@ -92,7 +96,7 @@ export async function POST(
         break;
 
       case "CONNECTION_UPDATE":
-        await handleConnectionUpdate(integracao.id, slug, data as unknown as ConnectionData);
+        await handleConnectionUpdate(integracao.id, data as unknown as ConnectionData);
         break;
 
       case "QRCODE_UPDATED":
@@ -108,7 +112,7 @@ export async function POST(
         break;
     }
   } catch (err) {
-    console.error(`[WPP webhook] ${slug} ${event}`, err);
+    console.error(`[WPP webhook] ${instanceName} ${event}`, err);
     // Always return 200 to prevent Evolution API from retrying indefinitely
   }
 
@@ -258,7 +262,7 @@ async function handleMessagesUpdate(integracaoId: string, data: MessageData) {
   }
 }
 
-async function handleConnectionUpdate(integracaoId: string, slug: string, data: ConnectionData) {
+async function handleConnectionUpdate(integracaoId: string, data: ConnectionData) {
   const { state, number } = data;
 
   const statusMap: Record<string, string> = {

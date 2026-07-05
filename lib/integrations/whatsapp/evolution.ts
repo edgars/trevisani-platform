@@ -1,6 +1,9 @@
 /**
  * Evolution API client.
- * Each tenant has one "instance" = one connected WhatsApp number.
+ *
+ * Um único servidor Evolution API é compartilhado por toda a plataforma
+ * (URL + API key globais, via env vars). Cada tenant recebe sua própria
+ * "instance" nesse servidor = um número de WhatsApp conectado só para ele.
  *
  * Docs: https://doc.evolution-api.com
  *
@@ -84,19 +87,80 @@ export async function criarInstancia(
   });
 }
 
+/**
+ * Formato bruto de resposta de GET /instance/connect/:instanceName.
+ * Varia entre versões/instalações da Evolution API — às vezes vem "achatado"
+ * (base64/code na raiz), às vezes aninhado em "qrcode". Tratamos os dois.
+ */
+interface ConnectResponse {
+  base64?:      string;
+  code?:        string;
+  pairingCode?: string;
+  count?:       number;
+  qrcode?: { base64?: string; code?: string; count?: number } | string;
+  instance?: { state?: string };
+}
+
 /** Retorna o QR code para conectar. Chamar depois de criarInstancia(). */
 export async function obterQrCode(instanceName: string): Promise<QrCodeData> {
-  return evFetch<{ qrcode: QrCodeData }>(`/instance/connect/${instanceName}`)
-    .then((r) => r.qrcode);
+  const r = await evFetch<ConnectResponse>(`/instance/connect/${instanceName}`);
+
+  const nested = typeof r.qrcode === "object" ? r.qrcode : undefined;
+  const base64 =
+    r.base64 ??
+    nested?.base64 ??
+    (typeof r.qrcode === "string" ? r.qrcode : undefined);
+
+  if (!base64) {
+    if (r.instance?.state === "open") {
+      throw new Error("Este número já está conectado. Atualize a página.");
+    }
+    throw new Error("A Evolution API não retornou um QR code. Tente novamente em alguns segundos.");
+  }
+
+  return {
+    qrcode:      base64,
+    pairingCode: r.pairingCode,
+    count:       r.count ?? nested?.count,
+  };
+}
+
+/**
+ * Formato bruto de um item de GET /instance/fetchInstances.
+ * Na v2 a resposta é um array de instâncias (campo "connectionStatus"),
+ * versões antigas retornam `{ instance: {...} }` com campo "status".
+ * Tratamos os dois para não depender de uma versão exata do servidor.
+ */
+interface RawInstanceStatus {
+  name?:             string;
+  instanceName?:     string;
+  connectionStatus?: string;
+  status?:           string;
+  ownerJid?:         string;
+  profileName?:      string;
+  profilePicUrl?:    string;
+  number?:           string;
 }
 
 /** Status atual da instância. */
 export async function statusInstancia(instanceName: string): Promise<EvolutionInstance | null> {
   try {
-    const data = await evFetch<{ instance: EvolutionInstance }>(
+    const data = await evFetch<RawInstanceStatus[] | { instance?: RawInstanceStatus }>(
       `/instance/fetchInstances?instanceName=${instanceName}`,
     );
-    return data.instance ?? null;
+    const raw = Array.isArray(data) ? data[0] : data?.instance;
+    if (!raw) return null;
+
+    const status = (raw.connectionStatus ?? raw.status) as EvolutionInstance["status"] | undefined;
+    if (!status) return null;
+
+    return {
+      instanceName:  raw.name ?? raw.instanceName ?? instanceName,
+      status,
+      profileName:   raw.profileName,
+      profilePicUrl: raw.profilePicUrl,
+      number:        raw.number ?? (raw.ownerJid ? jidParaNumero(raw.ownerJid) : undefined),
+    };
   } catch {
     return null;
   }
@@ -165,6 +229,17 @@ export async function marcarComoLido(
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Nome da instância no Evolution API para um tenant.
+ *
+ * Usa o `tenantId` (imutável) em vez do slug da loja — o lojista pode trocar
+ * o slug a qualquer momento em Configurações, e isso não pode quebrar uma
+ * instância de WhatsApp já conectada.
+ */
+export function wppInstanceName(tenantId: string): string {
+  return `loja-${tenantId}`;
+}
 
 /** Extrai número limpo do JID. Ex: "5511999998888@s.whatsapp.net" → "5511999998888" */
 export function jidParaNumero(jid: string): string {
