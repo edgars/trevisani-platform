@@ -33,7 +33,7 @@ async function assertWppEnabled(tenantId: string) {
 
 export async function conectarWhatsAppAction(
   slug: string,
-): Promise<{ error?: string; qrCode?: string; status?: string }> {
+): Promise<{ error?: string; qrCode?: string; status?: string; qrExpiresAt?: string }> {
   const session = await requireSession();
   const tenant  = await requireTenantPorSlug(slug);
   await assertWppEnabled(tenant.id);
@@ -57,18 +57,19 @@ export async function conectarWhatsAppAction(
   try {
     await criarInstancia(instanceName, webhookUrl, integracao.webhookSecret);
     const qr = await obterQrCode(instanceName);
+    const qrExpiresAt = new Date(Date.now() + 60_000); // QR válido por 60s
 
     await prisma.integracaoWhatsApp.update({
       where:  { tenantId: tenant.id },
       data: {
-        qrCode:     qr.qrcode,
-        qrExpiresAt: new Date(Date.now() + 60_000), // QR válido por 60s
-        status:     "AGUARDANDO_QR",
+        qrCode: qr.qrcode,
+        qrExpiresAt,
+        status: "AGUARDANDO_QR",
       },
     });
 
     revalidatePath(`/t/${slug}/whatsapp/configurar`);
-    return { qrCode: qr.qrcode, status: "AGUARDANDO_QR" };
+    return { qrCode: qr.qrcode, status: "AGUARDANDO_QR", qrExpiresAt: qrExpiresAt.toISOString() };
   } catch (err) {
     // Evita deixar o registro preso em "AGUARDANDO_QR" sem QR code — isso
     // travava a tela em "Gerando QR code..." para sempre a cada novo acesso,
@@ -88,11 +89,12 @@ export async function statusWhatsAppAction(slug: string): Promise<{
   status: string;
   numero?: string | null;
   qrCode?: string | null;
+  qrExpiresAt?: string | null;
 }> {
   const tenant = await requireTenantPorSlug(slug);
   const integracao = await prisma.integracaoWhatsApp.findUnique({
     where: { tenantId: tenant.id },
-    select: { status: true, numeroConectado: true, qrCode: true, instanceName: true },
+    select: { status: true, numeroConectado: true, qrCode: true, qrExpiresAt: true, instanceName: true },
   });
   if (!integracao) return { status: "DESCONECTADO" };
 
@@ -117,9 +119,10 @@ export async function statusWhatsAppAction(slug: string): Promise<{
   }
 
   return {
-    status:  integracao.status,
-    numero:  integracao.numeroConectado,
-    qrCode:  integracao.qrCode,
+    status:      integracao.status,
+    numero:      integracao.numeroConectado,
+    qrCode:      integracao.qrCode,
+    qrExpiresAt: integracao.qrExpiresAt?.toISOString() ?? null,
   };
 }
 

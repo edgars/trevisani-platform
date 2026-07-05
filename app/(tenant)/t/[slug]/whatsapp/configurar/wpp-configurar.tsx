@@ -24,6 +24,7 @@ interface Props {
   initialStatus: string;
   initialNumero?: string | null;
   initialQr?: string | null;
+  initialQrExpiresAt?: string | null;
   initialCriarLeadAuto: boolean;
 }
 
@@ -34,13 +35,30 @@ const STATUS_META = {
   ERRO:          { label: "Erro de conexão",  color: "bg-red-500",     badge: "destructive" as const },
 };
 
-export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, initialCriarLeadAuto }: Props) {
+export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, initialQrExpiresAt, initialCriarLeadAuto }: Props) {
   const [status, setStatus]         = React.useState(initialStatus);
   const [numero, setNumero]         = React.useState<string | null>(initialNumero ?? null);
   const [qrCode, setQrCode]         = React.useState<string | null>(initialQr ?? null);
+  const [qrExpiresAt, setQrExpiresAt] = React.useState<string | null>(initialQrExpiresAt ?? null);
   const [criarLead, setCriarLead]   = React.useState(initialCriarLeadAuto);
   const [savingCfg, setSavingCfg]   = React.useState(false);
   const [pending, startTransition]  = React.useTransition();
+
+  function refreshQr() {
+    startTransition(async () => {
+      const result = await conectarWhatsAppAction(slug);
+      if (result.error) {
+        toast.error(result.error);
+        setStatus(result.status ?? "ERRO");
+        setQrCode(null);
+        setQrExpiresAt(null);
+        return;
+      }
+      setStatus(result.status ?? "AGUARDANDO_QR");
+      setQrCode(result.qrCode ?? null);
+      setQrExpiresAt(result.qrExpiresAt ?? null);
+    });
+  }
 
   const meta = STATUS_META[status as keyof typeof STATUS_META] ?? STATUS_META.DESCONECTADO;
 
@@ -54,11 +72,15 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, i
       if (data.status !== status) {
         setStatus(data.status);
         setNumero(data.numero ?? null);
-        if (data.status === "CONECTADO") setQrCode(null);
+        if (data.status === "CONECTADO") { setQrCode(null); setQrExpiresAt(null); }
+      } else if (data.qrCode && data.qrCode !== qrCode) {
+        // QR foi renovado no servidor (ex.: webhook QRCODE_UPDATED em produção)
+        setQrCode(data.qrCode);
+        setQrExpiresAt(data.qrExpiresAt ?? null);
       }
     }, 3000);
     return () => clearInterval(id);
-  }, [status, slug]);
+  }, [status, slug, qrCode]);
 
   // Salvaguarda: se ficarmos em "AGUARDANDO_QR" sem nenhum QR (ex.: estado
   // preso de uma tentativa anterior, ou falha silenciosa da Evolution API),
@@ -73,18 +95,26 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, i
     return () => clearTimeout(timeout);
   }, [status, qrCode]);
 
+  // O QR code expira ~60s depois de gerado. Em produção o webhook
+  // QRCODE_UPDATED renova sozinho (pego pelo polling acima), mas em dev
+  // local a Evolution API não consegue chamar o webhook em localhost — então
+  // pedimos um QR novo proativamente antes de expirar, senão o usuário fica
+  // escaneando um código morto que nunca conecta.
+  React.useEffect(() => {
+    if (status !== "AGUARDANDO_QR" || !qrCode) return;
+
+    const msAteExpirar = qrExpiresAt
+      ? new Date(qrExpiresAt).getTime() - Date.now()
+      : 50_000; // sem data conhecida (estado legado) — assume ~perto de expirar
+    const delay = Math.max(0, msAteExpirar - 5_000); // renova 5s antes de expirar
+
+    const timeout = setTimeout(refreshQr, delay);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, qrCode, qrExpiresAt, slug]);
+
   function handleConectar() {
-    startTransition(async () => {
-      const result = await conectarWhatsAppAction(slug);
-      if (result.error) {
-        toast.error(result.error);
-        setStatus(result.status ?? "ERRO");
-        setQrCode(null);
-        return;
-      }
-      setStatus(result.status ?? "AGUARDANDO_QR");
-      setQrCode(result.qrCode ?? null);
-    });
+    refreshQr();
   }
 
   function handleDesconectar() {
@@ -94,6 +124,7 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, i
       setStatus("DESCONECTADO");
       setNumero(null);
       setQrCode(null);
+      setQrExpiresAt(null);
       toast.success("WhatsApp desconectado.");
     });
   }
@@ -105,6 +136,7 @@ export function WppConfigurar({ slug, initialStatus, initialNumero, initialQr, i
       setStatus("DESCONECTADO");
       setNumero(null);
       setQrCode(null);
+      setQrExpiresAt(null);
       toast.success("Instância removida.");
     });
   }
