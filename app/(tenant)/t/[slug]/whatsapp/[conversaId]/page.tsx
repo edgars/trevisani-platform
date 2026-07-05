@@ -27,7 +27,14 @@ export default async function ConversaPage({
   if (!integracao) notFound();
 
   const conversas = await prisma.conversaWpp.findMany({
-    where: { integracaoId: integracao.id },
+    where: {
+      integracaoId: integracao.id,
+      remoteJid: { not: "status@broadcast" },
+      NOT: [
+        { remoteJid: { startsWith: "0@" } },
+        { remoteJid: { endsWith: "@g.us" } },
+      ],
+    },
     orderBy: { ultimaMensagem: "desc" },
     take: 100,
     include: {

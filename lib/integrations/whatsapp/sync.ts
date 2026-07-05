@@ -23,6 +23,15 @@ function normalizarTipo(tipo?: string): string {
   return "text";
 }
 
+function jidValidoParaInbox(remoteJid: string): boolean {
+  if (!remoteJid) return false;
+  if (remoteJid === "status@broadcast") return false;
+  if (remoteJid.endsWith("@g.us")) return false;
+  const numero = remoteJid.split("@")[0]?.replace(/\D/g, "") ?? "";
+  if (!numero || numero === "0") return false;
+  return numero.length >= 8;
+}
+
 function extrairCorpoMensagem(msg: EvolutionMessage): string | null {
   const m = msg.message;
   if (!m) return null;
@@ -55,9 +64,7 @@ export async function sincronizarInboxDaInstancia(params: {
         ? chat.lastMessage.key.remoteJidAlt
         : chat.remoteJid;
     const remoteJid = canonicalRemoteJid;
-    if (!remoteJid) continue;
-    if (remoteJid === "status@broadcast") continue;
-    if (remoteJid.endsWith("@g.us")) continue;
+    if (!remoteJid || !jidValidoParaInbox(remoteJid)) continue;
 
     const timestampSec = chat.lastMessage?.messageTimestamp;
     const ultimaMensagem = timestampSec

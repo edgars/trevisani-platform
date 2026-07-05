@@ -196,10 +196,12 @@ async function handleMessagesUpsert(
     key.remoteJidAlt?.endsWith("@s.whatsapp.net")
       ? key.remoteJidAlt
       : key.remoteJid;
+  const numeroCanonico = canonicalRemoteJid.split("@")[0]?.replace(/\D/g, "") ?? "";
 
   // Ignore group messages (JIDs ending with @g.us) and status broadcasts
   if (canonicalRemoteJid.endsWith("@g.us")) return;
   if (canonicalRemoteJid === "status@broadcast") return;
+  if (!numeroCanonico || numeroCanonico === "0" || numeroCanonico.length < 8) return;
 
   const timestamp = messageTimestamp
     ? new Date(messageTimestamp * 1000)
