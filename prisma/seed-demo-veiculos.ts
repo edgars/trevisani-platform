@@ -10,55 +10,57 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Fotos via Lorem Picsum — sempre disponíveis, seed determinístico por modelo
-// https://picsum.photos/seed/{seed}/900/675
+// Fotos de carros reais via Unsplash (IDs verificados)
+const U = (id: string) =>
+  `https://images.unsplash.com/${id}?w=900&q=80&auto=format&fit=crop`;
+
 const FOTOS: Record<string, { url: string; storagePath: string; legenda: string }[]> = {
-  "Onix":    [
-    { url: "https://picsum.photos/seed/onix-frente/900/675",    storagePath: "demo/onix-1.jpg",    legenda: "Frente" },
-    { url: "https://picsum.photos/seed/onix-lateral/900/675",   storagePath: "demo/onix-2.jpg",    legenda: "Lateral" },
+  "Onix": [
+    { url: U("photo-1555215695-3004980ad54e"), storagePath: "demo/onix-1.jpg",    legenda: "Frente" },
+    { url: U("photo-1552519507-da3b142c6e3d"), storagePath: "demo/onix-2.jpg",    legenda: "Lateral" },
   ],
-  "Gol":     [
-    { url: "https://picsum.photos/seed/gol-frente/900/675",     storagePath: "demo/gol-1.jpg",     legenda: "Frente" },
+  "Gol": [
+    { url: U("photo-1494976388531-d1058494cdd8"), storagePath: "demo/gol-1.jpg",  legenda: "Frente" },
   ],
-  "HB20":    [
-    { url: "https://picsum.photos/seed/hb20-frente/900/675",    storagePath: "demo/hb20-1.jpg",    legenda: "Frente" },
-    { url: "https://picsum.photos/seed/hb20-interior/900/675",  storagePath: "demo/hb20-2.jpg",    legenda: "Interior" },
+  "HB20": [
+    { url: U("photo-1503376780353-7e6692767b70"), storagePath: "demo/hb20-1.jpg", legenda: "Frente" },
+    { url: U("photo-1494976388531-d1058494cdd8"), storagePath: "demo/hb20-2.jpg", legenda: "Lateral" },
   ],
-  "Creta":   [
-    { url: "https://picsum.photos/seed/creta-frente/900/675",   storagePath: "demo/creta-1.jpg",   legenda: "Frente" },
-    { url: "https://picsum.photos/seed/creta-lateral/900/675",  storagePath: "demo/creta-2.jpg",   legenda: "Lateral" },
+  "Creta": [
+    { url: U("photo-1519641471654-76ce0107ad1b"), storagePath: "demo/creta-1.jpg",  legenda: "Frente" },
+    { url: U("photo-1533473359331-0135ef1b58bf"), storagePath: "demo/creta-2.jpg",  legenda: "Lateral" },
   ],
   "Corolla": [
-    { url: "https://picsum.photos/seed/corolla-frente/900/675", storagePath: "demo/corolla-1.jpg", legenda: "Frente" },
-    { url: "https://picsum.photos/seed/corolla-lateral/900/675",storagePath: "demo/corolla-2.jpg", legenda: "Lateral" },
+    { url: U("photo-1583121274602-3e2820c69888"), storagePath: "demo/corolla-1.jpg", legenda: "Frente" },
+    { url: U("photo-1552519507-da3b142c6e3d"),    storagePath: "demo/corolla-2.jpg", legenda: "Lateral" },
   ],
-  "Polo":    [
-    { url: "https://picsum.photos/seed/polo-frente/900/675",    storagePath: "demo/polo-1.jpg",    legenda: "Frente" },
-    { url: "https://picsum.photos/seed/polo-lateral/900/675",   storagePath: "demo/polo-2.jpg",    legenda: "Lateral" },
+  "Polo": [
+    { url: U("photo-1552519507-da3b142c6e3d"), storagePath: "demo/polo-1.jpg", legenda: "Frente" },
+    { url: U("photo-1555215695-3004980ad54e"), storagePath: "demo/polo-2.jpg", legenda: "Lateral" },
   ],
-  "Argo":    [
-    { url: "https://picsum.photos/seed/argo-frente/900/675",    storagePath: "demo/argo-1.jpg",    legenda: "Frente" },
-    { url: "https://picsum.photos/seed/argo-lateral/900/675",   storagePath: "demo/argo-2.jpg",    legenda: "Lateral" },
+  "Argo": [
+    { url: U("photo-1503376780353-7e6692767b70"), storagePath: "demo/argo-1.jpg", legenda: "Frente" },
+    { url: U("photo-1555215695-3004980ad54e"),    storagePath: "demo/argo-2.jpg", legenda: "Lateral" },
   ],
   "Compass": [
-    { url: "https://picsum.photos/seed/compass-frente/900/675", storagePath: "demo/compass-1.jpg", legenda: "Frente" },
-    { url: "https://picsum.photos/seed/compass-traseira/900/675",storagePath: "demo/compass-2.jpg",legenda: "Traseira" },
+    { url: U("photo-1519641471654-76ce0107ad1b"), storagePath: "demo/compass-1.jpg", legenda: "Frente" },
+    { url: U("photo-1485291571150-772bcfc10da5"), storagePath: "demo/compass-2.jpg", legenda: "Lateral" },
   ],
   "T-Cross": [
-    { url: "https://picsum.photos/seed/tcross-frente/900/675",  storagePath: "demo/tcross-1.jpg",  legenda: "Frente" },
-    { url: "https://picsum.photos/seed/tcross-lateral/900/675", storagePath: "demo/tcross-2.jpg",  legenda: "Lateral" },
+    { url: U("photo-1533473359331-0135ef1b58bf"), storagePath: "demo/tcross-1.jpg", legenda: "Frente" },
+    { url: U("photo-1519641471654-76ce0107ad1b"), storagePath: "demo/tcross-2.jpg", legenda: "Lateral" },
   ],
-  "HR-V":    [
-    { url: "https://picsum.photos/seed/hrv-frente/900/675",     storagePath: "demo/hrv-1.jpg",     legenda: "Frente" },
-    { url: "https://picsum.photos/seed/hrv-lateral/900/675",    storagePath: "demo/hrv-2.jpg",     legenda: "Lateral" },
+  "HR-V": [
+    { url: U("photo-1485291571150-772bcfc10da5"), storagePath: "demo/hrv-1.jpg", legenda: "Frente" },
+    { url: U("photo-1533473359331-0135ef1b58bf"), storagePath: "demo/hrv-2.jpg", legenda: "Lateral" },
   ],
-  "Toro":    [
-    { url: "https://picsum.photos/seed/toro-frente/900/675",    storagePath: "demo/toro-1.jpg",    legenda: "Frente" },
-    { url: "https://picsum.photos/seed/toro-cacamba/900/675",   storagePath: "demo/toro-2.jpg",    legenda: "Caçamba" },
+  "Toro": [
+    { url: U("photo-1511919884226-fd3cad34687c"), storagePath: "demo/toro-1.jpg", legenda: "Frente" },
+    { url: U("photo-1519641471654-76ce0107ad1b"), storagePath: "demo/toro-2.jpg", legenda: "Lateral" },
   ],
-  "Pulse":   [
-    { url: "https://picsum.photos/seed/pulse-frente/900/675",   storagePath: "demo/pulse-1.jpg",   legenda: "Frente" },
-    { url: "https://picsum.photos/seed/pulse-lateral/900/675",  storagePath: "demo/pulse-2.jpg",   legenda: "Lateral" },
+  "Pulse": [
+    { url: U("photo-1519641471654-76ce0107ad1b"), storagePath: "demo/pulse-1.jpg", legenda: "Frente" },
+    { url: U("photo-1583121274602-3e2820c69888"), storagePath: "demo/pulse-2.jpg", legenda: "Lateral" },
   ],
 };
 
