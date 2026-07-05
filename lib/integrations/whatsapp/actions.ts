@@ -8,6 +8,7 @@ import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import {
   criarInstancia,
+  configurarWebhookInstancia,
   obterQrCode,
   statusInstancia,
   desconectarInstancia,
@@ -56,6 +57,9 @@ export async function conectarWhatsAppAction(
 
   try {
     await criarInstancia(instanceName, webhookUrl, integracao.webhookSecret);
+    // Mesmo que a instância já exista (criada em outro ambiente), força a
+    // configuração do webhook atual para evitar ficar apontando para localhost.
+    await configurarWebhookInstancia(instanceName, webhookUrl, integracao.webhookSecret);
     const qr = await obterQrCode(instanceName);
     const qrExpiresAt = new Date(Date.now() + 60_000); // QR válido por 60s
 

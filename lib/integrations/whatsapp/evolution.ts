@@ -69,7 +69,7 @@ export async function criarInstancia(
       integration: "WHATSAPP-BAILEYS",
       webhook: {
         url:     webhookUrl,
-        byEvents: true,
+        byEvents: false,
         base64:  false,
         headers: { "x-webhook-secret": webhookSecret },
         events: [
@@ -84,6 +84,36 @@ export async function criarInstancia(
   }).catch((err) => {
     // Ignora erro se instância já existe
     if (!String(err).includes("already")) throw err;
+  });
+}
+
+/**
+ * Garante/atualiza configuração de webhook da instância.
+ * Usamos sempre URL absoluta pública e header secreto atual do banco.
+ */
+export async function configurarWebhookInstancia(
+  instanceName: string,
+  webhookUrl: string,
+  webhookSecret: string,
+): Promise<void> {
+  await evFetch(`/webhook/set/${instanceName}`, {
+    method: "POST",
+    body: JSON.stringify({
+      webhook: {
+        enabled:  true,
+        url:      webhookUrl,
+        byEvents: false,
+        base64:   false,
+        headers:  { "x-webhook-secret": webhookSecret },
+        events: [
+          "MESSAGES_UPSERT",
+          "MESSAGES_UPDATE",
+          "CONNECTION_UPDATE",
+          "QRCODE_UPDATED",
+          "CONTACTS_UPSERT",
+        ],
+      },
+    }),
   });
 }
 
