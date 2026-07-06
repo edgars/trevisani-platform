@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { MessageCircle, Search, Settings, User, WifiOff } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
-import { formatarNumero, jidCanonico, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
+import { formatarNumero, jidCanonico, jidParaNumero, listarChatsComCache } from "@/lib/integrations/whatsapp/evolution";
 import { sincronizarInstancia } from "@/lib/integrations/whatsapp/sync";
 
 export const dynamic = "force-dynamic";
@@ -36,14 +37,13 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
     select:  { id: true, status: true, numeroConectado: true, instanceName: true },
   });
 
-  // Sync pull-based: ao abrir o inbox, puxa chats + mensagens da Evolution.
-  // Cobre novas conversas e respostas de clientes mesmo sem webhook.
+  // Sync pull-based roda em background (after): não bloqueia a renderização.
+  // O inbox mostra o estado atual do banco e o sync atualiza para a próxima visita.
   if (integracao?.status === "CONECTADO") {
-    await sincronizarInstancia({
-      integracaoId: integracao.id,
-      instanceName: integracao.instanceName,
-      intervaloMs: 5000,
-    }).catch(() => {});
+    const { id: integracaoId, instanceName } = integracao;
+    after(() =>
+      sincronizarInstancia({ integracaoId, instanceName, intervaloMs: 5000 }).catch(() => {}),
+    );
   }
 
   const conversas = integracao
@@ -71,7 +71,7 @@ export default async function WppInboxPage({ params }: { params: Promise<{ slug:
 
   const avatarByJid = new Map<string, string>();
   if (integracao?.status === "CONECTADO") {
-    const chats = await listarChats(integracao.instanceName, 150).catch(() => []);
+    const chats = await listarChatsComCache(integracao.instanceName, 150).catch(() => []);
     for (const c of chats) {
       if (!c.remoteJid || !c.profilePicUrl) continue;
       // A foto pode vir no chat @lid — indexa pelo JID canônico da conversa.

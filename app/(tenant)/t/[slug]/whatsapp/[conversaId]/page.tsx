@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
 import { ArrowLeft, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth/session";
 import { requireTenantPorSlug } from "@/lib/tenant/resolver";
 import { prisma } from "@/lib/db/client";
-import { formatarNumero, jidCanonico, jidParaNumero, listarChats } from "@/lib/integrations/whatsapp/evolution";
+import { formatarNumero, jidCanonico, jidParaNumero, listarChatsComCache } from "@/lib/integrations/whatsapp/evolution";
 import { sincronizarInstancia } from "@/lib/integrations/whatsapp/sync";
 import { WppChat } from "./wpp-chat";
 
@@ -27,19 +28,22 @@ export default async function ConversaPage({
   });
   if (!integracao) notFound();
 
-  // Sincroniza com a Evolution antes de renderizar, priorizando esta conversa —
-  // garante que respostas do cliente e leituras apareçam já no primeiro load.
+  // Sync roda em background (after) para não atrasar o primeiro paint;
+  // o polling do chat (2s) exibe o que o sync trouxer logo em seguida.
   if (integracao.status === "CONECTADO") {
-    const alvo = await prisma.conversaWpp.findFirst({
-      where:  { id: conversaId, integracaoId: integracao.id },
-      select: { remoteJid: true },
+    const { id: integracaoId, instanceName } = integracao;
+    after(async () => {
+      const alvo = await prisma.conversaWpp.findFirst({
+        where:  { id: conversaId, integracaoId },
+        select: { remoteJid: true },
+      });
+      await sincronizarInstancia({
+        integracaoId,
+        instanceName,
+        jidPrioritario: alvo?.remoteJid,
+        intervaloMs: 3000,
+      }).catch(() => {});
     });
-    await sincronizarInstancia({
-      integracaoId: integracao.id,
-      instanceName: integracao.instanceName,
-      jidPrioritario: alvo?.remoteJid,
-      intervaloMs: 3000,
-    }).catch(() => {});
   }
 
   const conversas = await prisma.conversaWpp.findMany({
@@ -62,7 +66,7 @@ export default async function ConversaPage({
       },
     },
   });
-  const chats = await listarChats(integracao.instanceName, 150).catch(() => []);
+  const chats = await listarChatsComCache(integracao.instanceName, 150).catch(() => []);
   const avatarByJid = new Map<string, string>();
   for (const c of chats) {
     if (!c.remoteJid || !c.profilePicUrl) continue;

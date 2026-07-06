@@ -2,6 +2,7 @@
 
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { prisma } from "@/lib/db/client";
 import { requireSession } from "@/lib/auth/session";
@@ -276,7 +277,7 @@ export async function marcarLidasAction(
 export async function getMensagensAction(
   slug: string,
   conversaId: string,
-  after?: Date,
+  depoisDe?: Date,
 ): Promise<{ id: string; fromMe: boolean; corpo: string | null; tipo: string; timestamp: Date; lida: boolean }[]> {
   const tenant = await requireTenantPorSlug(slug);
   const conversa = await prisma.conversaWpp.findUnique({
@@ -289,19 +290,21 @@ export async function getMensagensAction(
   if (!conversa || conversa.integracao.tenantId !== tenant.id) return [];
 
   if (conversa.integracao.status === "CONECTADO") {
-    // Puxa da Evolution antes de responder — garante que respostas do cliente
-    // (inclusive as entregues via @lid) e confirmações de leitura apareçam
-    // mesmo sem webhook. Throttle interno evita excesso de chamadas.
-    await sincronizarInstancia({
-      integracaoId: conversa.integracao.id,
-      instanceName: conversa.integracao.instanceName,
-      jidPrioritario: conversa.remoteJid,
-      intervaloMs: 3500,
-    }).catch(() => {});
+    // Sync com a Evolution roda DEPOIS da resposta (after) para não segurar o
+    // polling: este request devolve o estado atual do banco na hora e o
+    // próximo poll (2s) já enxerga o que o sync trouxe.
+    after(() =>
+      sincronizarInstancia({
+        integracaoId: conversa.integracao.id,
+        instanceName: conversa.integracao.instanceName,
+        jidPrioritario: conversa.remoteJid,
+        intervaloMs: 3500,
+      }).catch(() => {}),
+    );
   }
 
   const mensagens = await prisma.mensagemWpp.findMany({
-    where:   { conversaId, ...(after ? { timestamp: { gt: after } } : {}) },
+    where:   { conversaId, ...(depoisDe ? { timestamp: { gt: depoisDe } } : {}) },
     orderBy: { timestamp: "desc" },
     take:    250,
     select:  { id: true, fromMe: true, corpo: true, tipo: true, timestamp: true, lida: true },

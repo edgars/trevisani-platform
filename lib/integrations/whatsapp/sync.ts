@@ -138,7 +138,7 @@ export async function sincronizarInstancia(params: {
   // Estado atual local para decidir o que precisa ser reprocessado.
   const conversasLocais = await prisma.conversaWpp.findMany({
     where: { integracaoId },
-    select: { id: true, remoteJid: true, ultimaMensagem: true },
+    select: { id: true, remoteJid: true, ultimaMensagem: true, nomeContato: true },
   });
   const conversaPorJid = new Map(conversasLocais.map((c) => [c.remoteJid, c]));
 
@@ -167,18 +167,25 @@ export async function sincronizarInstancia(params: {
       metaPorJid.get(jid)?.pushName ??
       null;
 
-    const conversa = await prisma.conversaWpp.upsert({
-      where: { integracaoId_remoteJid: { integracaoId, remoteJid: jid } },
-      update: nomeContato ? { nomeContato } : {},
-      create: {
-        integracaoId,
-        remoteJid: jid,
-        nomeContato,
-        totalNaoLidas: 0,
-        ultimaMensagem: new Date(maxTsMs || Date.now()),
-      },
-      select: { id: true },
-    });
+    // Evita upsert quando a conversa já existe e o nome não mudou.
+    let conversa: { id: string };
+    if (local && (!nomeContato || local.nomeContato === nomeContato)) {
+      conversa = { id: local.id };
+    } else {
+      conversa = await prisma.conversaWpp.upsert({
+        where: { integracaoId_remoteJid: { integracaoId, remoteJid: jid } },
+        update: nomeContato ? { nomeContato } : {},
+        create: {
+          integracaoId,
+          remoteJid: jid,
+          nomeContato,
+          totalNaoLidas: 0,
+          ultimaMensagem: new Date(maxTsMs || Date.now()),
+        },
+        select: { id: true },
+      });
+    }
+    let houveMerge = false;
 
     // Funde conversas antigas criadas com o alias @lid na canônica.
     for (const alias of aliasesPorJid.get(jid) ?? []) {
@@ -201,6 +208,7 @@ export async function sincronizarInstancia(params: {
       }
       await prisma.conversaWpp.delete({ where: { id: duplicada.id } });
       conversaPorJid.delete(alias);
+      houveMerge = true;
     }
 
     const existentes = await prisma.mensagemWpp.findMany({
@@ -248,19 +256,21 @@ export async function sincronizarInstancia(params: {
       resultado.lidasAtualizadas += count;
     }
 
-    // Recalcula resumo da conversa a partir do estado real das mensagens.
-    const [naoLidas, ultima] = await Promise.all([
-      prisma.mensagemWpp.count({ where: { conversaId: conversa.id, fromMe: false, lida: false } }),
-      prisma.mensagemWpp.findFirst({
-        where: { conversaId: conversa.id },
-        orderBy: { timestamp: "desc" },
-        select: { timestamp: true },
-      }),
-    ]);
-    await prisma.conversaWpp.update({
-      where: { id: conversa.id },
-      data: { totalNaoLidas: naoLidas, ultimaMensagem: ultima?.timestamp ?? undefined },
-    });
+    // Recalcula o resumo apenas se algo de fato mudou nesta conversa.
+    if (novas.length > 0 || idsLidas.length > 0 || houveMerge) {
+      const [naoLidas, ultima] = await Promise.all([
+        prisma.mensagemWpp.count({ where: { conversaId: conversa.id, fromMe: false, lida: false } }),
+        prisma.mensagemWpp.findFirst({
+          where: { conversaId: conversa.id },
+          orderBy: { timestamp: "desc" },
+          select: { timestamp: true },
+        }),
+      ]);
+      await prisma.conversaWpp.update({
+        where: { id: conversa.id },
+        data: { totalNaoLidas: naoLidas, ultimaMensagem: ultima?.timestamp ?? undefined },
+      });
+    }
   }
 
   return resultado;

@@ -1,5 +1,6 @@
 {
   "alias": ["volante7.com.br", "*.volante7.com.br"],
+  "regions": ["pdx1"],
   "crons": [
     {
       "path": "/api/leiloes/encerrar",

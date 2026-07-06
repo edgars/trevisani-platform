@@ -337,6 +337,26 @@ export async function listarChats(instanceName: string, take = 100): Promise<Evo
   return [];
 }
 
+// Cache em memória dos chats (fotos de perfil/nomes) — evita uma chamada à
+// Evolution a cada render de página. Por instância warm de serverless.
+const chatsCache = new Map<string, { expiraEm: number; chats: EvolutionChat[] }>();
+const CHATS_CACHE_TTL_MS = 60_000;
+
+/** Versão cacheada de listarChats para dados pouco voláteis (avatar, nome). */
+export async function listarChatsComCache(instanceName: string, take = 150): Promise<EvolutionChat[]> {
+  const agora = Date.now();
+  const cache = chatsCache.get(instanceName);
+  if (cache && cache.expiraEm > agora) return cache.chats;
+
+  const chats = await listarChats(instanceName, take);
+  // Não cacheia resposta vazia por muito tempo (pode ser falha transitória).
+  chatsCache.set(instanceName, {
+    chats,
+    expiraEm: agora + (chats.length > 0 ? CHATS_CACHE_TTL_MS : 5_000),
+  });
+  return chats;
+}
+
 function extrairListaMensagens(payload: unknown): EvolutionMessage[] {
   if (Array.isArray(payload)) return payload as EvolutionMessage[];
   if (payload && typeof payload === "object") {
